@@ -1,6 +1,6 @@
 # "input_omegaA" branch
 
-Adapt the AERA code in order to read aragonite saturation state (omegaA) as input files.
+Adapt the AERA code in order to read aragonite saturation state (omegaA) as input files instead of GSAT.
 
 # Adaptive Emission Reduction Approach (AERA)
 
