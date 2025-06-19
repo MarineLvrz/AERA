@@ -1,3 +1,7 @@
+# "input_omegaA" branch
+
+Adapt the AERA code in order to read aragonite saturation state (omegaA) as input files.
+
 # Adaptive Emission Reduction Approach (AERA)
 
 This module implements the AERA algorithm developed
