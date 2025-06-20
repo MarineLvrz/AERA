@@ -1,6 +1,7 @@
 # "input_omegaA" branch
 
 Adapt the AERA code in order to read aragonite saturation state (omegaA) as input files instead of GSAT.
+Hello, this is a test to test if I am indeed able to synchronise my project on Oceandata with the GitLab repository.
 
 # Adaptive Emission Reduction Approach (AERA)
 
