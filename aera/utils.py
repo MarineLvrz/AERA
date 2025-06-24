@@ -110,15 +110,16 @@ def get_base_df(
 
     df = pd.concat(df_list, axis=1)
     df['temp'] = np.nan
-    #df['ff_emission'].loc[2026:] = np.nan
-    #df['lu_emission'].loc[:1849] = np.nan
-    #df['non_co2_emission'].loc[:1849] = np.nan
-    df.loc[2026:, 'ff_emission'] = np.nan      # Modified from original AERA version to avoid FutureWarning
-    df.loc[:1849, 'lu_emission'] = np.nan      # Modified from original AERA version to avoid FutureWarning
-    df.loc[:1849, 'non_co2_emission'] = np.nan # Modified from original AERA version to avoid FutureWarning
+    df['OmegaA'] = np.nan # ML
+    #df['ff_emission'].loc[2026:] = np.nan # ML
+    #df['lu_emission'].loc[:1849] = np.nan # ML
+    #df['non_co2_emission'].loc[:1849] = np.nan # ML
+    df.loc[2026:, 'ff_emission'] = np.nan      # ML, Modified from original AERA version to avoid FutureWarning
+    df.loc[:1849, 'lu_emission'] = np.nan      # ML, Modified from original AERA version to avoid FutureWarning
+    df.loc[:1849, 'non_co2_emission'] = np.nan # ML, Modified from original AERA version to avoid FutureWarning
     df.index.name = 'year'
     # Reorder columns
     df = df[['non_co2_emission', 'lu_emission',
-             'ff_emission', 'temp']]
+             'ff_emission', 'temp', 'OmegaA']] # ML
 
     return df.loc[MIN_YEAR:2499]
