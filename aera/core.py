@@ -28,6 +28,7 @@ from aera import io
 from aera import emission_curve
 
 
+# Not needed for aragonite
 def runmean(array, winlen):
     """Calculates a running mean of any timeseries using a window
     length (winlen).
@@ -39,6 +40,7 @@ def runmean(array, winlen):
     return np.convolve(array, np.ones((winlen)) / winlen, mode='same')
 
 
+# Not needed for aragonite
 def extrapolated_runmean(array, winlen):
     """Extrapolates a running mean at the beginning and end of the 
     time series. At the beginning, the window size is simply reduced. 
@@ -71,6 +73,8 @@ def extrapolated_runmean(array, winlen):
 
     return array_runmean
 
+
+# Not needed for aragonite
 def extrapolated_runmean_anth_temp(year_x, model_start_year, s_temp, winlen):
     """Calculate an extrapolated running mean of the simulated temperature.
 
@@ -91,7 +95,7 @@ def extrapolated_runmean_anth_temp(year_x, model_start_year, s_temp, winlen):
     return extrapolated_runmean(temp, winlen)
 
 
-
+# Not needed for aragonite
 def calculate_absolute_target_temperature(
         temp_target_rel, model_start_year, s_temp, winlen,
         temp_target_type, costum_anth_temp_func=None):
@@ -124,7 +128,7 @@ def calculate_absolute_target_temperature(
         # Calculate anthropogenic warming in 2020
         if costum_anth_temp_func is None:
             temp_anth_2020 = extrapolated_runmean_anth_temp(
-            2020,model_start_year, s_temp, winlen)[-1]
+            2020, model_start_year, s_temp, winlen)[-1]
         else:
             temp_anth_2020 = costum_anth_temp_func(
                 2020, model_start_year, s_temp,
@@ -141,6 +145,25 @@ def calculate_absolute_target_temperature(
     else:
         print('Invald temperature target type chosen (options are: {1, 2}).')
     return temp_target_abs
+
+
+# QUESTION Ensure that this is the good way to compute this quantity
+# Only needed for aragonite
+def calculate_relative_target_aragonite(  # ML
+    arag_target_abs, s_arag, model_start_year):
+    """
+    Calculate the relative target for aragonite saturation state.
+
+    Args:
+        
+    Returns:
+
+    """
+    # Relative target aragonite, computed based on the method used for computing the absolute
+    # temperature target for target type 2, see calculate_absolute_target_temperature()
+    # The sign is difference because aragonite is decreasing with time
+    arag_target_rel = np.nanmean(s_arag.loc[model_start_year:1900].values) - arag_target_abs
+    return arag_target_rel
 
 
 def _calculate_previous_emission_slope(year_x, meta_file):
@@ -210,6 +233,25 @@ def calculate_remaining_emission_budget(
     print('REB: ', reb)
     return reb
 
+
+def calculate_remaining_emission_budget_oa( # ML
+        arag_abs_ts, total_emission, arag_target_abs, year_x,
+        model_start_year):
+    
+    # Substract the reference period aragonite (1850-1900)
+    darag_ref_yearx = (
+        arag_abs_ts.loc[year_x]) - arag_abs_ts.loc[model_start_year:1900].mean()
+    print('Relative anthropogenic warming in Year X: ', darag_ref_yearx)
+    print('Cumulative past emissions: ',
+          total_emission.loc[model_start_year:year_x-1].sum())
+    # Calculate TCRE (Cum. Emissions divided by anthropogenic warming)
+    slope = total_emission.loc[model_start_year:year_x -
+                               1].sum() / darag_ref_yearx
+    # Multiply TCRE with remaing allowable warming
+    reb = (arag_target_abs - arag_abs_ts.loc[year_x]) * slope
+    print('REB: ', reb)
+    return reb
+    
 
 def get_adaptive_emissions(
         temp_target_rel, temp_target_type, year_x,
@@ -350,8 +392,87 @@ def get_adaptive_emissions(
         meta_file, temp_target_rel, temp_target_abs, year_x,
         model_start_year, s_temp_anth, s_total_emission, s_ff_emission, ec)
 
+    return s_ff_emission.loc[year1:year2] 
+
+
+def get_adaptive_emissions_oa( # ML
+        arag_target_abs, arag_target_type_remove, year_x,
+        model_start_year, df, meta_file, costum_anth_temp_func=None):
+    """
+    QUESTIONS:
+        1. What is the difference between "s_temp_anth" and "s_temp_abs"?
+            I think that the first one is the temperature time series to which
+            a runinning mean of 30 years was performed to remvove climate variability.
+            The second one is the "raw" temperature time series.
+        2. Do we agree that these two quantities coincide in the case of arag variable?
+            I think yes, because there is no need to remove climate variability.
+            In arag case, there would only need s_arag_abs
+            
+    """
+
+    # Some CMIP5 models start later than 1850. The earliest start year
+    # is 1850 because no observed temperature record exists before.
+    # Simulated parameters before 1850 are not used
+    model_start_year = max(
+        1850, model_start_year)
+    utils.validate_df_oa(df, year_x, model_start_year)
+
+    total_emission_cols = ['ff_emission', 'lu_emission', 'non_co2_emission']
+    s_total_emission = df[total_emission_cols].sum(skipna=True, axis=1)
+
+    # Calculate the aragonite saturation state target ---> not needed
+
+    # Extract the aragonite saturation state time series until the time of 
+    # the stocktake
+    s_arag_abs = df['OmegaA'].loc[model_start_year:year_x].copy()
+    
+    # Extract anthropogenic warming ---> not needed
+
+    # Extract again the temperature time series until the time of the
+    # stocktake, simulated/measured temperature and only anthropogenic
+    # temperature will be needed later ---> not needed
+
+    # Calculate remaining emissions budget
+    reb = calculate_remaining_emission_budget_oa(
+        s_arag_abs, s_total_emission, arag_target_abs, year_x,
+        model_start_year)
+
+    # Read in slope at Year_X as estimated at previous stocktake
+    previous_slope = _calculate_previous_emission_slope(year_x, meta_file)
+    if previous_slope is not None:
+        previous_slope = float(previous_slope)
+
+    # Calculate the slope of the emissions curve at year X-1
+    slope_tm1 = s_total_emission.loc[year_x]-s_total_emission.loc[year_x-1]
+    slope_tm1 = float(slope_tm1)
+
+    # Calculate the future emission curves
+    ec = emission_curve.EmissionCurve.get_cheapest_curve_oa( # get_cheapest_curve actually does not need arag_target_rel
+        s_total_emission, year_x, reb, slope_tm1, previous_slope)
+
+    # Add 5 (arbitrary number) years to extend the emission curve further in
+    # case of extrapolation problems if models need emissions from the year 
+    # ahead to calculate monthly emissions in the 2nd half of the year
+    additional_years = 5
+    t = np.arange(1, ec.target_year_rel + additional_years + 2)
+    year1 = int(year_x + 1)
+    year2 = int(year1 + ec.target_year_rel) + additional_years
+    s_total_emission.loc[year1:year2] = ec.get_values(t=t)
+    print('CO2-fe emissions [Pg C] (fossil fuel CO2 + landuse + non-CO2) '
+          'over next years:')
+    print(s_total_emission.loc[year1:year2-5])
+
+    # Calculate fossil fuel emissions as the difference between
+    # estimated total emissions, prescribed land-use and nonCO2 emissions
+    s_ff_emission = (
+        s_total_emission - df['lu_emission'] - df['non_co2_emission'])
+    s_ff_emission.name = 'ff_emission'
+
+    arag_target_rel = calculate_relative_target_aragonite(arag_target_abs, s_arag_abs, model_start_year)
+    
+    # Store data to metafile for debug and post-analysis
+    io.store_metadata_oa(
+        meta_file, arag_target_rel, arag_target_abs, year_x,
+        model_start_year, s_arag_abs, s_total_emission, s_ff_emission, ec)
+
     return s_ff_emission.loc[year1:year2]
-
-
-
-    # FLAG FLAG FLAG

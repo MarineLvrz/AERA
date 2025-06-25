@@ -270,3 +270,70 @@ class EmissionCurve:
                     ec_optimal = ec
                     cost = ec.cost
         return ec_optimal
+
+        
+    @classmethod # ML
+    def get_cheapest_curve_oa(
+            cls, s_total_emission, year_x, reb, slope_tm1,
+            previous_slope=None):
+        # Slope of the curve estimated by the previous stocktake for
+        # the year of this stocktake is chosen as a starting guess
+        c0 = previous_slope
+
+        if previous_slope is None:
+            # If no previous stocktake exist that used the AERA, use
+            # the slope at year X
+            c0 = s_total_emission.diff().loc[year_x]
+
+        # d is the present day emissions
+        d = s_total_emission.loc[year_x]
+
+        # The future emission curve needs to be at least 5 years long.
+        # When the temperature target is almost reached and emissions
+        # are small, the minimum length is increased to avoid overly 
+        # strong reactions to decadal or interannual variability that 
+        # may look like an anthropogenic trend in temperatures.
+        # The maximum length is 150 years but can be extended for high
+        # temperature targets to avoid an increase in present-day 
+        # emissions to get faster to these temperatures. Thus, the 
+        # polynom length is extended by one year for each 5 Pg C that 
+        # exceed 500 Pg C.
+      
+        reb_tmp = cp.deepcopy(reb)
+        d_tmp = cp.deepcopy(d)
+
+        if np.abs(d_tmp) > 10:
+            d_tmp = 10 * np.sign(d_tmp)
+
+        reb_tmp = reb_tmp - 500
+        
+        if reb_tmp < 0:
+            reb_tmp = 0
+            
+        # Variable length of polynom dependend on present day emissions
+        target_year_rel_max = int(150 + reb_tmp/5.0)
+        target_year_rel_min = int(5 + (((100-(d_tmp**2))/100.) * 45))        
+
+        # The max and min of the rate of change are chosen so large that
+        # they will very likely never appear and hence cover the entire range
+        c_change_min = -2.5
+        c_change_max = 2.5
+
+        cost = 1e10
+        ec_optimal = None
+
+        # Vary the slope parameter `c` and the length of the emission curve
+        # (target_year_rel) to find the optimal emission curve
+        for slope_change in np.arange(c_change_min, c_change_max, 0.1):
+            c = c0 + slope_change
+            for target_year_rel in np.arange(
+                    target_year_rel_min, target_year_rel_max+1):
+                # Create a new EmissionCurve instance with the varied slope
+                # and target_year_rel parameters
+                ec = cls(target_year_rel, c, d, c0, reb, slope_tm1)
+
+                # Retain curve if its cost is smaller than the lowest cost yet
+                if ec.cost < cost:
+                    ec_optimal = ec
+                    cost = ec.cost
+        return ec_optimal
