@@ -351,3 +351,7 @@ def get_adaptive_emissions(
         model_start_year, s_temp_anth, s_total_emission, s_ff_emission, ec)
 
     return s_ff_emission.loc[year1:year2]
+
+
+
+    # FLAG FLAG FLAG
