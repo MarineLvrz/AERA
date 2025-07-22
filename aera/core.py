@@ -161,8 +161,8 @@ def calculate_relative_target_aragonite(  # ML
     """
     # Relative target aragonite, computed based on the method used for computing the absolute
     # temperature target for target type 2, see calculate_absolute_target_temperature()
-    # The sign is difference because aragonite is decreasing with time
-    arag_target_rel = np.nanmean(s_arag.loc[model_start_year:1900].values) - arag_target_abs
+    # We expect a negative relative aragonite target, because OmegaA is decreasing
+    arag_target_rel = arag_target_abs - np.nanmean(s_arag.loc[model_start_year:1900].values)
     return arag_target_rel
 
 
@@ -241,7 +241,7 @@ def calculate_remaining_emission_budget_oa( # ML
     # Substract the reference period aragonite (1850-1900)
     darag_ref_yearx = (
         arag_abs_ts.loc[year_x]) - arag_abs_ts.loc[model_start_year:1900].mean()
-    print('Relative anthropogenic warming in Year X: ', darag_ref_yearx)
+    print('Relative anthropogenic acidification in Year X: ', darag_ref_yearx)
     print('Cumulative past emissions: ',
           total_emission.loc[model_start_year:year_x-1].sum())
     # Calculate TCRE (Cum. Emissions divided by anthropogenic warming)
