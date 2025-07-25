@@ -27,8 +27,7 @@ from aera import utils
 from aera import io
 from aera import emission_curve
 
-
-# Not needed for aragonite
+# Generic, no need to adjust for arag
 def runmean(array, winlen):
     """Calculates a running mean of any timeseries using a window
     length (winlen).
@@ -39,8 +38,7 @@ def runmean(array, winlen):
     """
     return np.convolve(array, np.ones((winlen)) / winlen, mode='same')
 
-
-# Not needed for aragonite
+# Generic, no need to adjust for arag
 def extrapolated_runmean(array, winlen):
     """Extrapolates a running mean at the beginning and end of the 
     time series. At the beginning, the window size is simply reduced. 
@@ -73,8 +71,6 @@ def extrapolated_runmean(array, winlen):
 
     return array_runmean
 
-
-# Not needed for aragonite
 def extrapolated_runmean_anth_temp(year_x, model_start_year, s_temp, winlen):
     """Calculate an extrapolated running mean of the simulated temperature.
 
@@ -95,7 +91,27 @@ def extrapolated_runmean_anth_temp(year_x, model_start_year, s_temp, winlen):
     return extrapolated_runmean(temp, winlen)
 
 
-# Not needed for aragonite
+def extrapolated_runmean_anth_arag(year_x, model_start_year, s_arag, winlen):
+    """Calculate an extrapolated running mean of the simulated temperature.
+
+    Args:
+        year_x: Year of the sticktake
+        model_start_year (int): Year in which the historical
+            simulation (pre-cursor for the adaptive scenario
+            simulation) was started.
+        s_arag: Simulated aragonite saturation state timeseries
+        winlen: window length of running mean for saturation state fit
+
+    Returns:
+        Extrapolated running mean of the simulated temperature 
+
+    """
+    arag = np.array(s_arag.loc[model_start_year:year_x])
+
+    return extrapolated_runmean(arag, winlen)
+
+
+# Not needed for aragonite, because already given as input
 def calculate_absolute_target_temperature(
         temp_target_rel, model_start_year, s_temp, winlen,
         temp_target_type, costum_anth_temp_func=None):
@@ -148,26 +164,25 @@ def calculate_absolute_target_temperature(
 
 
 # QUESTION Ensure that this is the good way to compute this quantity
-# Only needed for aragonite
+# Only needed for aragonite, because for temperature it is given as input
 def calculate_relative_target_aragonite(  # ML
     arag_target_abs, s_arag, model_start_year):
     """
     Calculate the relative target for aragonite saturation state.
-
+    Relative target aragonite, computed based on the method used for computing the absolute temperature target for target type 2, see calculate_absolute_target_temperature().
+    # We expect a negative relative aragonite target, because aragonite is decreasing.
     Args:
         
     Returns:
 
     """
-    # Relative target aragonite, computed based on the method used for computing the absolute
-    # temperature target for target type 2, see calculate_absolute_target_temperature()
-    # We expect a negative relative aragonite target, because OmegaA is decreasing
+    
     arag_target_rel = arag_target_abs - np.nanmean(s_arag.loc[model_start_year:1900].values)
     return arag_target_rel
 
 
 def _calculate_previous_emission_slope(year_x, meta_file):
-    """Calculate the slope at Year X by using the emission
+    """Calculate the slope at year X by using the emission
     curve from the previous stocktake.
 
     To make the emission curve as smooth as possible the
@@ -235,12 +250,12 @@ def calculate_remaining_emission_budget(
 
 
 def calculate_remaining_emission_budget_oa( # ML
-        arag_abs_ts, total_emission, arag_target_abs, year_x,
-        model_start_year):
+        arag_anth, total_emission, arag_target_abs, year_x,
+        model_start_year, arag_abs_ts):
     
     # Substract the reference period aragonite (1850-1900)
     darag_ref_yearx = (
-        arag_abs_ts.loc[year_x]) - arag_abs_ts.loc[model_start_year:1900].mean()
+        arag_anth.loc[year_x]) - arag_abs_ts.loc[model_start_year:1900].mean()
     print('Relative anthropogenic acidification in Year X: ', darag_ref_yearx)
     print('Cumulative past emissions: ',
           total_emission.loc[model_start_year:year_x-1].sum())
@@ -248,7 +263,7 @@ def calculate_remaining_emission_budget_oa( # ML
     slope = total_emission.loc[model_start_year:year_x -
                                1].sum() / darag_ref_yearx
     # Multiply TCRE with remaing allowable warming
-    reb = (arag_target_abs - arag_abs_ts.loc[year_x]) * slope
+    reb = (arag_target_abs - arag_anth.loc[year_x]) * slope
     print('REB: ', reb)
     return reb
     
@@ -397,16 +412,9 @@ def get_adaptive_emissions(
 
 def get_adaptive_emissions_oa( # ML
         arag_target_abs, arag_target_type_remove, year_x,
-        model_start_year, df, meta_file, costum_anth_temp_func=None):
+        model_start_year, df, meta_file, costum_anth_arag_func=None):
     """
-    QUESTIONS:
-        1. What is the difference between "s_temp_anth" and "s_temp_abs"?
-            I think that the first one is the temperature time series to which
-            a runinning mean of 30 years was performed to remvove climate variability.
-            The second one is the "raw" temperature time series.
-        2. Do we agree that these two quantities coincide in the case of arag variable?
-            I think yes, because there is no need to remove climate variability.
-            In arag case, there would only need s_arag_abs
+    
             
     """
 
@@ -417,25 +425,37 @@ def get_adaptive_emissions_oa( # ML
         1850, model_start_year)
     utils.validate_df_oa(df, year_x, model_start_year)
 
-    total_emission_cols = ['ff_emission', 'lu_emission', 'non_co2_emission']
+    total_emission_cols = ['ff_emission', 'lu_emission'] # ML, We remove non-co2, because in the case of aragonite, we want only ff + LUC in the computation of the TCRE
     s_total_emission = df[total_emission_cols].sum(skipna=True, axis=1)
 
-    # Calculate the aragonite saturation state target ---> not needed
+    # Define window length for extrapolated running mean
+    winlen = 31
 
-    # Extract the aragonite saturation state time series until the time of 
-    # the stocktake
+    # Calculate relative aragonite target
+    arag_target_rel = calculate_relative_target_aragonite(arag_target_abs, df['OmegaA'], model_start_year)
+
+    # Initialise the variable for anthropogenic aragonite time series until the time of the stocktake
+    s_arag_anth = df['OmegaA'].loc[model_start_year:year_x].copy()
+
+    # Extract anthropogenic aragonite time series
+    # Second option does not exist for aragonite
+    if costum_anth_arag_func is None:
+        s_arag_anth.loc[:] = extrapolated_runmean_anth_arag(
+            year_x,model_start_year, df['OmegaA'], winlen)
+    else:
+        s_arag_anth.loc[:] = costum_anth_arag_func(
+            year_x, model_start_year, df['OmegaA'],
+        )
+
+    # Extract again the aragonite saturation state time series until # the time of the stocktake, simulated/measured temperature and 
+    # only anthropogenic aragonite saturation state will be needed 
+    # later
     s_arag_abs = df['OmegaA'].loc[model_start_year:year_x].copy()
-    
-    # Extract anthropogenic warming ---> not needed
-
-    # Extract again the temperature time series until the time of the
-    # stocktake, simulated/measured temperature and only anthropogenic
-    # temperature will be needed later ---> not needed
 
     # Calculate remaining emissions budget
     reb = calculate_remaining_emission_budget_oa(
-        s_arag_abs, s_total_emission, arag_target_abs, year_x,
-        model_start_year)
+        s_arag_anth, s_total_emission, arag_target_abs, year_x,
+        model_start_year, s_arag_abs)
 
     # Read in slope at Year_X as estimated at previous stocktake
     previous_slope = _calculate_previous_emission_slope(year_x, meta_file)
@@ -467,12 +487,10 @@ def get_adaptive_emissions_oa( # ML
     s_ff_emission = (
         s_total_emission - df['lu_emission'] - df['non_co2_emission'])
     s_ff_emission.name = 'ff_emission'
-
-    arag_target_rel = calculate_relative_target_aragonite(arag_target_abs, s_arag_abs, model_start_year)
     
     # Store data to metafile for debug and post-analysis
     io.store_metadata_oa(
         meta_file, arag_target_rel, arag_target_abs, year_x,
-        model_start_year, s_arag_abs, s_total_emission, s_ff_emission, ec)
+        model_start_year, s_arag_anth, s_total_emission, s_ff_emission, ec)
 
     return s_ff_emission.loc[year1:year2]
