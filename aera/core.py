@@ -425,7 +425,7 @@ def get_adaptive_emissions_oa( # ML
         1850, model_start_year)
     utils.validate_df_oa(df, year_x, model_start_year)
 
-    total_emission_cols = ['ff_emission', 'lu_emission'] # ML, We remove non-co2, because in the case of aragonite, we want only ff + LUC in the computation of the TCRE
+    total_emission_cols = ['ff_emission', 'lu_emission'] # ML, We discard non-co2, because in the case of aragonite, we want only ff + LUC in the computation of the TCRE
     s_total_emission = df[total_emission_cols].sum(skipna=True, axis=1)
 
     # Define window length for extrapolated running mean
@@ -483,9 +483,9 @@ def get_adaptive_emissions_oa( # ML
     print(s_total_emission.loc[year1:year2-5])
 
     # Calculate fossil fuel emissions as the difference between
-    # estimated total emissions, prescribed land-use and nonCO2 emissions
+    # estimated total emissions and prescribed land-use emissions
     s_ff_emission = (
-        s_total_emission - df['lu_emission'] - df['non_co2_emission'])
+        s_total_emission - df['lu_emission']) # ML, we only need to subtract LUC emissions because for OA, non CO2 emissions are not accounted for
     s_ff_emission.name = 'ff_emission'
     
     # Store data to metafile for debug and post-analysis

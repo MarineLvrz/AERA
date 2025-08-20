@@ -189,6 +189,7 @@ def get_base_df_oa(
 
     df_list = []
     
+    # Read and assign prescribed input data
     df_non_co2_emission = _load_dat_df(
         non_co2_emission_file, ['non_co2_emission'], delim_whitespace=True)
     df_list.append(df_non_co2_emission)
@@ -202,10 +203,12 @@ def get_base_df_oa(
     df_list.append(df_lu_emission)
 
     df = pd.concat(df_list, axis=1)
+
+    # Take into account timesteps that are not assigned to any prescribed input data
     df['temp'] = np.nan
     df['OmegaA'] = np.nan # ML
-    #df['ff_emission'].loc[2026:] = np.nan # ML
-    #df['lu_emission'].loc[:1849] = np.nan # ML
+    #df['ff_emission'].loc[2026:] = np.nan      # ML
+    #df['lu_emission'].loc[:1849] = np.nan      # ML
     #df['non_co2_emission'].loc[:1849] = np.nan # ML
     df.loc[2026:, 'ff_emission'] = np.nan      # ML, Modified from original AERA version to avoid FutureWarning
     df.loc[:1849, 'lu_emission'] = np.nan      # ML, Modified from original AERA version to avoid FutureWarning
