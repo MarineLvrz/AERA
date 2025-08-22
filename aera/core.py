@@ -91,11 +91,12 @@ def extrapolated_runmean_anth_temp(year_x, model_start_year, s_temp, winlen):
     return extrapolated_runmean(temp, winlen)
 
 
-def extrapolated_runmean_anth_arag(year_x, model_start_year, s_arag, winlen):
-    """Calculate an extrapolated running mean of the simulated temperature.
+def extrapolated_runmean_anth_arag(year_x, model_start_year, s_arag, winlen): # ML
+    """Calculate an extrapolated running mean of the simulated aragonite
+       saturation state.
 
     Args:
-        year_x: Year of the sticktake
+        year_x: Year of the stocktake
         model_start_year (int): Year in which the historical
             simulation (pre-cursor for the adaptive scenario
             simulation) was started.
@@ -103,7 +104,7 @@ def extrapolated_runmean_anth_arag(year_x, model_start_year, s_arag, winlen):
         winlen: window length of running mean for saturation state fit
 
     Returns:
-        Extrapolated running mean of the simulated temperature 
+        Extrapolated running mean of the simulated aragonite saturation state. 
 
     """
     arag = np.array(s_arag.loc[model_start_year:year_x])
@@ -169,8 +170,12 @@ def calculate_relative_target_aragonite(  # ML
     arag_target_abs, s_arag, model_start_year):
     """
     Calculate the relative target for aragonite saturation state.
-    Relative target aragonite, computed based on the method used for computing the absolute temperature target for target type 2, see calculate_absolute_target_temperature().
-    # We expect a negative relative aragonite target, because aragonite is decreasing.
+    Relative target aragonite, computed based on the method used for computing the
+    absolute temperature target for target type 2, see 
+    calculate_absolute_target_temperature().
+    We expect a negative relative aragonite target, because aragonite saturation state
+    is decreasing.
+    
     Args:
         
     Returns:
@@ -425,7 +430,10 @@ def get_adaptive_emissions_oa( # ML
         1850, model_start_year)
     utils.validate_df_oa(df, year_x, model_start_year)
 
-    total_emission_cols = ['ff_emission', 'lu_emission'] # ML, We discard non-co2, because in the case of aragonite, we want only ff + LUC in the computation of the TCRE
+    # We discard non-co2, because in the case of aragonite saturation
+    # state, we want only ff + LUC in the computation of the TCRE.
+    # Non-CO2 do not impact ocean acidification.
+    total_emission_cols = ['ff_emission', 'lu_emission'] # ML
     s_total_emission = df[total_emission_cols].sum(skipna=True, axis=1)
 
     # Define window length for extrapolated running mean
@@ -447,7 +455,8 @@ def get_adaptive_emissions_oa( # ML
             year_x, model_start_year, df['OmegaA'],
         )
 
-    # Extract again the aragonite saturation state time series until # the time of the stocktake, simulated/measured temperature and 
+    # Extract again the aragonite saturation state time series until 
+    # the time of the stocktake, simulated/measured temperature and 
     # only anthropogenic aragonite saturation state will be needed 
     # later
     s_arag_abs = df['OmegaA'].loc[model_start_year:year_x].copy()
@@ -467,7 +476,8 @@ def get_adaptive_emissions_oa( # ML
     slope_tm1 = float(slope_tm1)
 
     # Calculate the future emission curves
-    ec = emission_curve.EmissionCurve.get_cheapest_curve_oa( # get_cheapest_curve actually does not need arag_target_rel
+    # get_cheapest_curve actually does not need the argument 'arag_target_rel'
+    ec = emission_curve.EmissionCurve.get_cheapest_curve_oa( 
         s_total_emission, year_x, reb, slope_tm1, previous_slope)
 
     # Add 5 (arbitrary number) years to extend the emission curve further in
@@ -478,14 +488,17 @@ def get_adaptive_emissions_oa( # ML
     year1 = int(year_x + 1)
     year2 = int(year1 + ec.target_year_rel) + additional_years
     s_total_emission.loc[year1:year2] = ec.get_values(t=t)
-    print('CO2-fe emissions [Pg C] (fossil fuel CO2 + landuse + non-CO2) '
+    # We discard non-CO2 for the reasons stated above
+    print('CO2 emissions [Pg C] (fossil fuel CO2 + landuse) ' 
           'over next years:')
     print(s_total_emission.loc[year1:year2-5])
 
     # Calculate fossil fuel emissions as the difference between
     # estimated total emissions and prescribed land-use emissions
+    # We only need to subtract LUC emissions in the case of OA, non-CO2 
+    # emissions are not considered into 's_total_emission'
     s_ff_emission = (
-        s_total_emission - df['lu_emission']) # ML, we only need to subtract LUC emissions because for OA, non CO2 emissions are not accounted for
+        s_total_emission - df['lu_emission']) # ML
     s_ff_emission.name = 'ff_emission'
     
     # Store data to metafile for debug and post-analysis

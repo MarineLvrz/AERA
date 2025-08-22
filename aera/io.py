@@ -146,4 +146,4 @@ def store_metadata_oa(
     ds_scalar = df_scalar.to_xarray()
 
     ds = xr.merge([ds_timeseries, ds_scalar])
-    ds.to_netcdf(meta_file)
+    ds.to_netcdf(meta_file) # type: ignore
