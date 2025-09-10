@@ -1,5 +1,10 @@
 # Adaptive Emission Reduction Approach (AERA)
 
+# "AERA_1.0" branch
+
+AERA for temperature target only.
+Based on AERA GitHub version with minor adjustments in order to remove warnings, for example.
+
 This module implements the AERA algorithm developed
 by Terhaar et al. (2022) 
 (https://www.nature.com/articles/s41558-022-01537-9), 
