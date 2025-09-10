@@ -46,7 +46,8 @@ def validate_df(df, year_x, model_start_year):
 
 def _load_dat_df(f, column_names, delim_whitespace=False):
     df = pd.read_table(
-        f, header=None, index_col=0, delim_whitespace=delim_whitespace)
+        #f, header=None, index_col=0, delim_whitespace=delim_whitespace)
+        f, header=None, index_col=0,sep="\s+") # ML, Modified from original AERA version to avoid FutureWarning
     df.columns = column_names
     df.index.name = 'year'
     df.index = [int(x) for x in df.index.values]
@@ -86,10 +87,11 @@ def get_base_df(
     lu_emission_file = data_dir / 'lu_emis_ssp126_bern3d_adj_GCB2020_v1.dat'
     ff_emission_file = data_dir / 'co2_ff_GCP_plus_NDC_v1.dat'
 
+    print('--------------------------------') # ML
     print(f'Use the following non-CO2 emission file: {non_co2_emission_file}')
     print(f'Use the following land use emission file: {lu_emission_file}')
     print(
-        f'Use the following historical fossil fuel CO2 emission '
+        f'Use the following historical fossil-fuel CO2 emission '
         f'file: {ff_emission_file}')
 
     df_list = []
@@ -108,9 +110,12 @@ def get_base_df(
 
     df = pd.concat(df_list, axis=1)
     df['temp'] = np.nan
-    df['ff_emission'].loc[2026:] = np.nan
-    df['lu_emission'].loc[:1849] = np.nan
-    df['non_co2_emission'].loc[:1849] = np.nan
+    # df['ff_emission'].loc[2026:] = np.nan      # ML
+    # df['lu_emission'].loc[:1849] = np.nan      # ML
+    # df['non_co2_emission'].loc[:1849] = np.nan # ML
+    df.loc[2026:, 'ff_emission'] = np.nan      # ML, Modified from original AERA version to avoid FutureWarning
+    df.loc[:1849, 'lu_emission'] = np.nan      # ML, Modified from original AERA version to avoid FutureWarning
+    df.loc[:1849, 'non_co2_emission'] = np.nan # ML, Modified from original AERA version to avoid FutureWarning
     df.index.name = 'year'
     # Reorder columns
     df = df[['non_co2_emission', 'lu_emission',
