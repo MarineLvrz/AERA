@@ -181,34 +181,10 @@ class EmissionCurve:
             f'{self.c:.10f}*t + {self.d:.10f}'
         )
 
-    @classmethod
+    @classmethod # ML
     def get_cheapest_curve(
-            cls, s_total_emission, year_x, reb, slope_tm1, tem_tar,
+            cls, s_total_emission, year_x, reb, slope_tm1,
             previous_slope=None):
-        """Factory method to get the best emission curve.
-
-        This function searches the optimal emission curve by
-        varying the parameter c.
-
-        - The integral of the emission curve from year_x
-           to target year is approx. equal (as close as possible)
-           to the remaining emission budget (REB).
-        - The exceedence emissions are as small as possible
-
-        Args:
-            s_total_emission (pd.Series): Total GHG emission (CO2-eq)
-                timeseries.
-            year_x (int): Current year in which the emissions for the next
-                five years should be calculated.
-            reb (float): Remaining emission budget until the target
-                temperature is reached in Pg C.
-            slope_tm1 (float): Slope of emission curve in year_x-1
-            tem_tar: Relative temperature target
-
-        Returns:
-            emission_curve (EmissionCurve): Optimal emission curve.
-
-        """
         # Slope of the curve estimated by the previous stocktake for
         # the year of this stocktake is chosen as a starting guess
         c0 = previous_slope
@@ -222,13 +198,13 @@ class EmissionCurve:
         d = s_total_emission.loc[year_x]
 
         # The future emission curve needs to be at least 5 years long.
-        # When the temperature target is almost reached and emissions
+        # When the acidity target is almost reached and emissions
         # are small, the minimum length is increased to avoid overly 
         # strong reactions to decadal or interannual variability that 
-        # may look like an anthropogenic trend in temperatures.
+        # may look like an anthropogenic trend in acidification.
         # The maximum length is 150 years but can be extended for high
-        # temperature targets to avoid an increase in present-day 
-        # emissions to get faster to these temperatures. Thus, the 
+        # acidity targets to avoid an increase in present-day 
+        # emissions to get faster to these acidity levels. Thus, the 
         # polynom length is extended by one year for each 5 Pg C that 
         # exceed 500 Pg C.
       
@@ -269,4 +245,4 @@ class EmissionCurve:
                 if ec.cost < cost:
                     ec_optimal = ec
                     cost = ec.cost
-        return ec_optimal
+        return ec_optimal    
