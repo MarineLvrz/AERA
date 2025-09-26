@@ -81,10 +81,11 @@ def get_base_df(
             `aera.get_adaptive_emissions`.
 
     """
-    data_dir = Path(aera.__file__).parent / 'data'
+    data_dir = Path(aera.__file__).parent / 'data' # Location where this file was installed as part of AERA package. Take the parent file and go into data.
     non_co2_emission_file = data_dir / 'nonco2_emis_ssp126_v3.dat'
     lu_emission_file = data_dir / 'lu_emis_ssp126_bern3d_adj_GCB2020_v1.dat'
-    ff_emission_file = data_dir / 'co2_ff_GCP_plus_NDC_v1.dat'
+    #ff_emission_file = data_dir / 'co2_ff_GCP_plus_NDC_v1.dat' # ML
+    ff_emission_file = data_dir / 'co2_ff_GCP_updated_v1.dat' # ML
 
     print(f'Use the following non-CO2 emission file: {non_co2_emission_file}')
     print(f'Use the following land use emission file: {lu_emission_file}')
