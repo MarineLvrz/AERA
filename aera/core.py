@@ -1,16 +1,23 @@
-"""Core functions of the AERA algorithm.
-# TBD update doc
+"""
+Core functions of the AERA algorithm.
+
 Contains the following functions:
-- calculate_anth_temperature : Calculates the anthropogenic temperature.
-- calculate_absolute_target_temperature: Calculates the absolute target
-    temperature [K].
-- calculate_remaining_emission_budget : Calculates the remaining
+
+- runmean : Calculate a running mean of any timeseries using a window
+    length (winlen).
+- extrapolated_runmean : Extrapolate a running mean at the beginning and end of the 
+    time series.
+- extrapolated_runmean_anth_arag : Calculate the extrapolated running
+    mean of the observed/simulated aragonite saturation state. Calls the functions
+    extrapolated_runmean and runmean.
+- calculate_relative_target_aragonite : Calculate the relative target
+    for aragonite saturation state [-].
+- _calculate_previous_emission_slope : Calculate the slope at year X by using the emission
+    curve from the previous stocktake.
+- calculate_remaining_emission_budget : Calculate the remaining
     emission budget (REB). The REB is the amount of CO2-fe emission that
     are still allowed to be emitted in the future.
-- extrapolated_runmean_anth_temp: Calculates the extrapolated running
-    mean of the observed/simulated temperature. Calls the functions
-    extrapolated_runmean and runmean.
-- get_adaptive_emissions : MAIN FUNCTION. Calculates "optimal"
+- get_adaptive_emissions : MAIN FUNCTION. Calculate "optimal"
     near-future CO2 emissions.
 """
 
@@ -29,21 +36,27 @@ from aera import emission_curve
 
 
 def runmean(array, winlen):
-    """Calculates a running mean of any timeseries using a window
+    """
+    Calculates a running mean of any timeseries using a window
     length (winlen).
 
     Args:
         array: timeseries over which the running mean is calculated
-        winlen: window length of running mean
+        winlen: window length of running mean.
+
+    Returns:
+        Running mean of any timeseries given a window length.
     """
     print('--------------------------------')
     print('Executing AERA on branch AERA_2.0')
     print('--------------------------------')
+    
     return np.convolve(array, np.ones((winlen)) / winlen, mode='same')
 
 
 def extrapolated_runmean(array, winlen):
-    """Extrapolates a running mean at the beginning and end of the 
+    """
+    Extrapolates a running mean at the beginning and end of the 
     time series. At the beginning, the window size is simply reduced. 
     At the end, which is critical for the t_anth estimation at the 
     stocktake, the running mean is linearly extrapolated. This is 
@@ -56,6 +69,10 @@ def extrapolated_runmean(array, winlen):
     Args:
         array: timeseries over which the running mean is calculated
         winlen: window length of running mean
+
+    Returns:
+        Extrapolated running mean to handle the beginning and the end 
+        of the timeseries of interest
     """
     array_runmean = runmean(array, winlen)
     
@@ -76,11 +93,12 @@ def extrapolated_runmean(array, winlen):
 
 
 def extrapolated_runmean_anth_arag(year_x, model_start_year, s_arag, winlen): # ML
-    """Calculate an extrapolated running mean of the simulated aragonite
-       saturation state.
+    """
+    Calculate an extrapolated running mean of the simulated aragonite
+    saturation state.
 
     Args:
-        year_x: Year of the stocktake
+        year_x (int): Year of the stocktake
         model_start_year (int): Year in which the historical
             simulation (pre-cursor for the adaptive scenario
             simulation) was started.
@@ -89,14 +107,12 @@ def extrapolated_runmean_anth_arag(year_x, model_start_year, s_arag, winlen): # 
 
     Returns:
         Extrapolated running mean of the simulated aragonite saturation state. 
-
     """
     arag = np.array(s_arag.loc[model_start_year:year_x])
     
     return extrapolated_runmean(arag, winlen)
 
 
-# QUESTION Ensure that this is the good way to compute this quantity
 # Only needed for aragonite, because for temperature it is given as input
 def calculate_relative_target_aragonite(  # ML
     arag_target_abs, s_arag, model_start_year):
@@ -109,9 +125,14 @@ def calculate_relative_target_aragonite(  # ML
     saturation state is decreasing.
     
     Args:
+        arag_target_abs (float): Absolute aragonite saturation state target
+            (e.g. 2.75 or 1.0 []).
+        s_arag: Simulated aragonite saturation state timeseries.
+        model_start_year (int): Year in which the historical simulation 
+        (pre-cursor for the adaptive scenario simulation) was started.
         
     Returns:
-
+        arag_target_rel (float): relative aragonite saturation state target.
     """
     
     arag_target_rel = arag_target_abs - np.nanmean(s_arag.loc[model_start_year:1900].values)
@@ -120,9 +141,9 @@ def calculate_relative_target_aragonite(  # ML
 
 
 def _calculate_previous_emission_slope(year_x, meta_file):
-    """Calculate the slope at Year X by using the emission
+    """
+    Calculate the slope at year X by using the emission
     curve from the previous stocktake.
-
     To make the emission curve as smooth as possible the
     AERA algorithm has to use the previously calculated
     emission curve parameters (i.e. a, b, and c).
@@ -134,6 +155,8 @@ def _calculate_previous_emission_slope(year_x, meta_file):
             should be transfered from one run of the AERA algorithm
             to the next.
 
+    Returns: 
+        Emission slope at year X.
     """
     meta_file = Path(meta_file)
     if not meta_file.exists():
@@ -152,6 +175,26 @@ def _calculate_previous_emission_slope(year_x, meta_file):
 def calculate_remaining_emission_budget( # ML
         arag_anth, total_emission, arag_target_abs, year_x,
         model_start_year, arag_abs_ts):
+    
+    """
+    Calculate remaining emission budget.
+
+    Args:
+        arag_anth (array-like): Time series of anthropogenic aragonite 
+        saturation state (without any natural variablity).
+        total_emission (array-like): Time series of total emissions.
+        arag_target_abs (float): Absolute target aragonite saturation state.
+        year_x (int): Current year in which the emissions for the next
+            five years should be calculated.
+        model_start_year (int): Year in which the historical simulation 
+            (pre-cursor for the adaptive scenario simulation) was started.
+        arag_abs_ts (array-like): Time series of measured/simulated
+            aragonite saturation state (including natural variablity).
+
+    Returns:
+        reb (float): Remaining emission budget until the acidification target 
+            is reached in Pg C.
+    """
     
     # Substract the reference period aragonite (1850-1900)
     darag_ref_yearx = (
@@ -174,8 +217,38 @@ def get_adaptive_emissions( # ML
         arag_target_abs, year_x,
         model_start_year, df, meta_file, costum_anth_arag_func=None):
     """
-    
-            
+    Calculate "optimal" near-future CO2 emissions.
+
+    A full time series with CO2 emissions is returned, but only the next
+    five years are used in an AERA simulation. However, some
+    models calculate monthly emission data for the second half of the year
+    using already the annual emissions from the following year. Such models
+    therefore need at least one year more than these five years.
+
+    Args:
+        arag_target_abs (float): TeAragonite saturation state target (e.g. 2.75 []).
+        year_x (int): Current year in which the emissions for the next
+            five years should be calculated.
+        model_start_year (int): Year in which the historical
+            simulation (pre-cursor for the adaptive scenario simulation) was started.
+        df (pd.DataFrame): Pandas dataframe with years (int) as index
+            and the following columns (see utils.get_base_df which
+            provides a skeleton of this dataframe):
+            - OmegaA:  Global or regional annual mean aragonite saturation state
+              time series for the period ().
+            - ff_emission: Global annual mean fossil fuel CO2
+              emission time series (in Pg C / yr).
+            - lu_emission: Global annual mean land use change
+              CO2 emission time series (in Pg C / yr).
+            - non_co2_emission: Global annual mean non-CO2 emission (in
+              CO2-eq Pg C / yr)
+        meta_file (str or pathlib.Path): File for temporary data which
+            should be transfered from one run of the AERA algorithm
+            to the next.
+
+    Returns:
+        s_ff_emission (pd.Series): Annual globally integrated fossil fuel
+            CO2 emission time series (in Pg C / yr).            
     """
 
     # Some CMIP5 models start later than 1850. The earliest start year

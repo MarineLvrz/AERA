@@ -1,4 +1,5 @@
-"""Defintion of the EmissionCurve class.
+"""
+Defintion of the EmissionCurve class.
 
 The EmissionCurve class represents a cubic emission curve and
 offers the access to several properties of such a cubic emission
@@ -19,8 +20,8 @@ The optimal future emission curve is characterized as follows:
    to "target year" is approx. equal (as close as possible)
    to the remaining emission budget (REB).
 - The exceedence emissions are as small as possible.
-
 """
+
 import dataclasses
 import copy as cp
 import numpy as np
@@ -28,7 +29,8 @@ import numpy as np
 
 @dataclasses.dataclass
 class EmissionCurve:
-    """Representation of a cubic emission curve.
+    """
+    Representation of a cubic emission curve.
 
     The emission curve is a continuation of a modelled/observed
     emission timeseries and is defined as:
@@ -37,7 +39,6 @@ class EmissionCurve:
 
     with t as the number of years after the stocktake, and free 
     parameters `a`, `b`, `c`, and `d`.
-
     """
     target_year_rel: int
     c: float
@@ -48,13 +49,13 @@ class EmissionCurve:
 
     @property
     def a(self):
-        """Parameter `a` of the emission curve.
+        """
+        Parameter `a` of the emission curve.
 
         `a` depends on the choice of c and d and the length of the
         curve ty (targetyear) and is calculated as follows:
 
         a = (-2 * b * ty - c) / (3 * ty**2)
-
         """
         return (
             (-2 * self.b * self.target_year_rel - self.c) /
@@ -63,13 +64,13 @@ class EmissionCurve:
 
     @property
     def b(self):
-        """Parameter `b` of the emission curve.
+        """
+        Parameter `b` of the emission curve.
 
         `b` depends on the choice of c and d and the length of the
         curve ty (targetyear) and is calculated as follows:
 
         b = (-2 * c * ty - 3 * d) / ty**2
-
         """
         return (
             (-2 * self.c * self.target_year_rel - (3 * self.d)) /
@@ -122,7 +123,8 @@ class EmissionCurve:
 
     @property
     def cost(self):
-        """Cost/quality of this emission curve.
+        """
+        Cost/quality of this emission curve.
 
         First, all curves that do not match the REB within ±5 Pg C are
         excluded by attributing a cost of the order of 1e7
@@ -141,15 +143,14 @@ class EmissionCurve:
         )
 
     def get_values(self, t=None):
-        """Emissions values for every time t.
+        """
+        Emissions values for every time t.
 
         Args:
             t (array-like): Times for which the values should be 
                 calculated.
-
         Returns:
             values (array-like): List of values.
-
         """
         if t is None:
             t = np.arange(self.target_year_rel+1)
@@ -158,15 +159,14 @@ class EmissionCurve:
         return values
 
     def get_values_deriv2(self, t=None):
-        """2nd derivative of the emission curve at every time t.
+        """
+        2nd derivative of the emission curve at every time t.
 
         Args:
             t (array-like): Times for which the second derviative
                 should be calculated.
-
         Returns:
             deriv2 (array-like): List of second derviatives.
-
         """
         if t is None:
             t = np.arange(self.target_year_rel+1)
@@ -185,6 +185,31 @@ class EmissionCurve:
     def get_cheapest_curve(
             cls, s_total_emission, year_x, reb, slope_tm1,
             previous_slope=None):
+        """
+        Factory method to get the best emission curve.
+
+        This function searches the optimal emission curve by
+        varying the parameter c.
+
+        - The integral of the emission curve from year_x
+           to target year is approx. equal (as close as possible)
+           to the remaining emission budget (REB).
+        - The exceedence emissions are as small as possible
+
+        Args:
+            cls (Python class): 
+            s_total_emission (pd.Series): Total GHG emission (CO2-eq)
+                timeseries.
+            year_x (int): Current year in which the emissions for the next
+                five years should be calculated.
+            reb (float): Remaining emission budget until the acidity target
+                 is reached in Pg C.
+            slope_tm1 (float): Slope of emission curve in year_x-1
+                previous_slope (float): Slope of the curve estimated by the 
+                previous stocktake       
+        Returns:
+            emission_curve (EmissionCurve): Optimal emission curve.
+        """
         # Slope of the curve estimated by the previous stocktake for
         # the year of this stocktake is chosen as a starting guess
         c0 = previous_slope
