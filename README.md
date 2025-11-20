@@ -1,8 +1,12 @@
-# "AERA_2.0" branch
+# "AERA_2.0_millennium_run" branch
 
 AERA code for aragonite saturation state target only.
-Based on AERA_1.0 version, with new implementations coming from input_OmegaA version.
-Corresponds to a clean version of input_OmegaA where we have removed all references to the temperature variable.
+Based on AERA_2.0 version, small adjustments to allow to run the model up to year 3000
+- Edit get_base_df()
+  Define MAX_YEAR = 3200
+  Edit the return from [MIN_YEAR,MAX_YEAR]
+- Adjust the lu_emission_ssp_ ... .dat file such that it is filled with 0 up to year 3200
+  Most elegant way of doing is to write a final line `9999 0` (similarly to what was done in the file for non_co2 emissions).
 
 # Adaptive Emission Reduction Approach (AERA)
 
