@@ -13,7 +13,7 @@ curve like (see below for the defintions of these quantities):
 The main usage of the EmissionCurve class is to find an
 optimal (see below how "optimal" is defined) future
 emission curve given several variables. See classmethod
-`get_cheapest_curve` for additional information.
+`get_cheapest_curve` for extra information.
 
 The optimal future emission curve is characterized as follows:
 - The integral of the emission curve from "year X"
