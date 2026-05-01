@@ -22,6 +22,8 @@ The optimal future emission curve is characterized as follows:
 - The exceedence emissions are as small as possible.
 """
 
+from __future__ import annotations
+
 import dataclasses
 import copy as cp
 import numpy as np
@@ -315,7 +317,10 @@ class EmissionCurve:
         # they will very likely never appear and hence cover the entire range
         c_change_min = -2.5
         c_change_max = 2.5
-        c_change_delta = 0.01
+        # We choose a c_change_delta value that is a good compromise between
+        # fine sampling of the slope change parameter space and computational
+        # efficiency
+        c_change_delta = 0.001
 
         slope_changes = np.arange(
             c_change_min, c_change_max + c_change_delta, c_change_delta
