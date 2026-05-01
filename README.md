@@ -1,9 +1,3 @@
-# "AERA_2.0" branch
-
-AERA code for aragonite saturation state target only.
-Based on AERA_1.0 version, with new implementations coming from input_OmegaA version.
-Corresponds to a clean version of input_OmegaA where we have removed all references to the temperature variable.
-
 # Adaptive Emission Reduction Approach (AERA)
 
 This module implements the AERA algorithm developed
