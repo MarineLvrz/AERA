@@ -28,10 +28,11 @@ def validate_df(df, year_x, model_start_year):
             'The historical run is too short for this algorithm.')
 
     col_years_dict = {
-        'temp': np.arange(model_start_year, year_x+1),
-        'ff_emission': np.arange(model_start_year, year_x+1),
-        'lu_emission': np.arange(model_start_year, MAX_YEAR+1),
         'non_co2_emission': np.arange(model_start_year, MAX_YEAR+1),
+        'lu_emission': np.arange(model_start_year, MAX_YEAR+1),
+        'ff_emission': np.arange(model_start_year, year_x+1),
+        'temperature': np.arange(model_start_year, year_x+1),
+        # TODO: But here how to make the test pass even if 'temperature' or 'omega_arag' is empty? 
         }
     for col_name, years in col_years_dict.items():
         col = df[col_name].dropna()
@@ -46,7 +47,7 @@ def validate_df(df, year_x, model_start_year):
 
 def _load_dat_df(f, column_names, delim_whitespace=False):
     df = pd.read_table(
-        f, header=None, index_col=0, sep='\s+') # ML
+        f, header=None, index_col=0, sep='\s+') # ML 06.05.2026, remove FutureWarning
     df.columns = column_names
     df.index.name = 'year'
     df.index = [int(x) for x in df.index.values]
@@ -54,8 +55,8 @@ def _load_dat_df(f, column_names, delim_whitespace=False):
         np.arange(df.index.min(), df.index.max())).interpolate()
     return df
 
-# TODO: Add more columns in  df 
-# * but where is total emissions in this function ? -> see get_adaptive_emissions in the core.py
+# TODO: Add more columns in base_df
+# * non_co2_emission, lu_emission, ff_emission, temperature, omega_arag
 def get_base_df(
         ):
     """Return dataframe which is used by get_adaptive_emissions.
@@ -99,26 +100,24 @@ def get_base_df(
         non_co2_emission_file, ['non_co2_emission'], delim_whitespace=True)
     df_list.append(df_non_co2_emission)
 
-    df_ff_emission = _load_dat_df(
-        ff_emission_file, ['ff_emission'], delim_whitespace=True)
-    df_list.append(df_ff_emission)
-
     df_lu_emission = _load_dat_df(
         lu_emission_file, ['lu_emission'], delim_whitespace=True)
     df_list.append(df_lu_emission)
 
+    df_ff_emission = _load_dat_df(
+        ff_emission_file, ['ff_emission'], delim_whitespace=True)
+    df_list.append(df_ff_emission)
+
     df = pd.concat(df_list, axis=1)
-    df['temp'] = np.nan
-    #df['ff_emission'].loc[2026:] = np.nan
-    #df['lu_emission'].loc[:1849] = np.nan
-    #df['non_co2_emission'].loc[:1849] = np.nan
-    #df.index.name = 'year'
-    df.loc[2026:, 'ff_emission'] = np.nan      # ML
-    df.loc[:1849, 'lu_emission'] = np.nan      # ML
     df.loc[:1849, 'non_co2_emission'] = np.nan # ML
+    df.loc[:1849, 'lu_emission'] = np.nan      # ML
+    df.loc[2026:, 'ff_emission'] = np.nan      # ML
+    df['temperature'] = np.nan
+    # TODO
+    df.index.name = 'year'
 
     # Reorder columns
     df = df[['non_co2_emission', 'lu_emission',
-             'ff_emission', 'temp']]
+             'ff_emission', 'temperature']] # TODO
 
     return df.loc[MIN_YEAR:2499]

@@ -10,18 +10,20 @@ from scipy.optimize import curve_fit
 import pandas as pd
 import xarray as xr
 
-
 def store_metadata(
-        meta_file, temp_target_rel, temp_target_abs, year_x, model_start_year,
-        s_temp_anth, s_total_emission, s_ff_emission, emission_curve):
+        meta_file, temperature_target_rel, temperature_target_abs, year_x,
+        s_temperature_anth, s_total_ghg_emission, s_ff_emission, emission_curve):
     meta_file = Path(meta_file)
     timeseries_csv = Path(str(meta_file) + '.timeseries.csv')
     scalar_csv = Path(str(meta_file) + '.scalar.csv')
 
+    # TODO: Add new columns emissions ff + luc, omega_arag_anth, omega_arag_anth_rel
     timeseries_columns = [
-        'total_emission', 'ff_emission', 'temp_anth', 'temp_anth_rel']
+        'total_ghg_emission', 'ff_emission', 'temperature_anth', 'temperature_anth_rel']
+    
+    # TODO: Add new column omega_arag_target_abs
     scalar_columns = [
-        'temp_target_abs', 'total_emission_budget', 'ff_emission_budget',
+        'temperature_target_abs', 'total_ghg_emission_budget', 'ff_emission_budget',
         'reb', 'ec_cost', 'ec_reb_diff', 'ec_overshoot_integral', 'ec_slope_t1',
         'ec_slope_change', 'ec_overshoot','ec_curvature', 'ec_target_year_rel',
         'ec_a', 'ec_b', 'ec_c', 'ec_d',
@@ -41,10 +43,10 @@ def store_metadata(
             columns=scalar_columns+['year_stocktake'])
         df_scalar = df_scalar.set_index(['year_stocktake'])
 
-    df_scalar.loc[year_x, 'temp_target_abs'] = temp_target_abs
+    df_scalar.loc[year_x, 'temperature_target_abs'] = temperature_target_abs # TODO
     target_year_abs = emission_curve.target_year_rel + year_x
-    df_scalar.loc[year_x, 'total_emission_budget'] = (
-        s_total_emission.loc[:target_year_abs].sum())
+    df_scalar.loc[year_x, 'total_ghg_emission_budget'] = ( 
+        s_total_ghg_emission.loc[:target_year_abs].sum()) # TODO
     df_scalar.loc[year_x, 'ff_emission_budget'] = (
         s_ff_emission.loc[:target_year_abs].sum())
     df_scalar.loc[year_x, 'reb'] = emission_curve.reb
@@ -62,15 +64,15 @@ def store_metadata(
     for year in s_ff_emission.loc[:target_year_abs].index.values:
         df_timeseries.loc[
             (year_x, year), 'ff_emission'] = s_ff_emission.loc[year]
-    for year in s_total_emission.loc[:target_year_abs].index.values:
+    for year in s_total_ghg_emission.loc[:target_year_abs].index.values:
         df_timeseries.loc[
-            (year_x, year), 'total_emission'] = s_total_emission.loc[year]
-    for year in s_temp_anth.loc[:target_year_abs].index.values:
+            (year_x, year), 'total_ghg_emission'] = s_total_ghg_emission.loc[year] # TODO
+    for year in s_temperature_anth.loc[:target_year_abs].index.values:
         df_timeseries.loc[
-            (year_x, year), 'temp_anth'] = s_temp_anth.loc[year]
+            (year_x, year), 'temperature_anth'] = s_temperature_anth.loc[year] # TODO
         df_timeseries.loc[
-            (year_x, year), 'temp_anth_rel'] = (
-                  s_temp_anth.loc[year] - temp_target_abs + temp_target_rel)
+            (year_x, year), 'temperature_anth_rel'] = (
+                  s_temperature_anth.loc[year] - temperature_target_abs + temperature_target_rel) # TODO
     df_timeseries.to_csv(timeseries_csv)
 
     ds_timeseries = df_timeseries.to_xarray()

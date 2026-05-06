@@ -93,54 +93,54 @@ def extrapolated_runmean_anth_temp(year_x, model_start_year, s_temp, winlen):
 
 
 def calculate_absolute_target_temperature(
-        temp_target_rel, model_start_year, s_temp, winlen,
-        temp_target_type, costum_anth_temp_func=None):
+        temperature_target_rel, model_start_year, s_temp, winlen,
+        temperature_target_type, costum_anth_temperature_func=None):
     """Calculate the absolute target temperature.
 
     Args:
-        temp_target_rel (float): Relative temperature target
+        temperature_target_rel (float): Relative temperature target
             (e.g. 1.5K).
         model_start_year (int): Year in which the historical
             simulation (pre-cursor for the adaptive scenario
             simulation) was started.
-        s_temp: Simulated termperature timeseries
+        s_temp: Simulated temperature timeseries
         winlen: window length of running mean for temperature fit
-        temp_target_type (int): Switch for different types of temperature
+        temperature_target_type (int): Switch for different types of temperature
             targets.
             - 1: Temperature target estimated by observed remaining
                  warming from 2020 onwards
             - 2: Simulated warming anomaly with the reference period
                  1850-1900
-        costum_anth_temp_func (function): See documentation in
+        costum_anth_temperature_func (function): See documentation in
             `get_adaptive_emissions`.
 
     Returns:
-        temp_target_abs (float): Absolute target temperature [K].
+        temperature_target_abs (float): Absolute target temperature [K].
 
     """
     model_start_year = max(1850, model_start_year)
 
-    if temp_target_type == 1:
+    if temperature_target_type == 1:
         # Calculate anthropogenic warming in 2020
-        if costum_anth_temp_func is None:
-            temp_anth_2020 = extrapolated_runmean_anth_temp(
-            2020,model_start_year, s_temp, winlen)[-1]
+        if costum_anth_temperature_func is None:
+            temperature_anth_2020 = extrapolated_runmean_anth_temp(
+            2020, model_start_year, s_temp, winlen)[-1]
         else:
-            temp_anth_2020 = costum_anth_temp_func(
+            temperature_anth_2020 = costum_anth_temperature_func(
                 2020, model_start_year, s_temp,
             )[-1]
 
         # Absolute target temperature is based on observed
         # anthropogenic warming in 2020
-        temp_target_abs = (temp_anth_2020 +
-            (temp_target_rel - constants.OBS_ANTH_WARMING_2020))
-        print(f'Anthropogenic temperature 2020: {temp_anth_2020}')
-    elif temp_target_type == 2:
-        temp_target_abs = np.nanmean(
-            s_temp.loc[model_start_year:1900].values) + temp_target_rel
+        temperature_target_abs = (temperature_anth_2020 +
+            (temperature_target_rel - constants.OBS_ANTH_WARMING_2020))
+        print(f'Anthropogenic temperature 2020: {temperature_anth_2020}')
+    elif temperature_target_type == 2:
+        temperature_target_abs = np.nanmean(
+            s_temp.loc[model_start_year:1900].values) + temperature_target_rel
     else:
         print('Invald temperature target type chosen (options are: {1, 2}).')
-    return temp_target_abs
+    return temperature_target_abs
 
 
 def _calculate_previous_emission_slope(year_x, meta_file):
@@ -172,23 +172,25 @@ def _calculate_previous_emission_slope(year_x, meta_file):
     t = 5
     return 3 * a * t**2 + 2 * b * t + c
 
+# TODO redefine what is total emission
+# TODO what is temperature_abs_ts? 
 
 def calculate_remaining_emission_budget(
-        temp_anth, total_emission, temp_target_abs, year_x,
-        model_start_year, temp_abs_ts):
+        temperature_anth, total_ghg_emission, temperature_target_abs, year_x,
+        model_start_year, temperature_abs_ts):
     """Calculate remaining emission budget.
 
     Args:
-        temp_anth (array-like): Time series of anthropogenic temperature
+        temperature_anth (array-like): Time series of anthropogenic temperature
             (without any natural variablity).
-        total_emission (array-like): Time series of total emissions.
-        temp_target_abs (float): Absolute target temperature.
+        total_ghg_emission (array-like): Time series of total emissions.
+        temperature_target_abs (float): Absolute target temperature.
         year_x (int): Current year in which the emissions for the next
             five years should be calculated.
         model_start_year (int): Year in which the historical
             simulation (pre-cursor for the adaptive scenario simulation)
             was started.
-        temp_abs_ts (array-like): Time series of measured/simulated
+        temperature_abs_ts (array-like): Time series of measured/simulated
             temperature (including natural variablity).
 
     Returns:
@@ -197,23 +199,24 @@ def calculate_remaining_emission_budget(
 
     """
     # Substract the reference period temperature (1850-1900)
-    dtemp_ref_yearx = (
-        temp_anth.loc[year_x]) - temp_abs_ts.loc[model_start_year:1900].mean()
-    print('Relative anthropogenic warming in Year X: ', dtemp_ref_yearx)
+    dtemperature_ref_yearx = (
+        temperature_anth.loc[year_x]) - temperature_abs_ts.loc[model_start_year:1900].mean()
+    print('Relative anthropogenic warming in Year X: ', dtemperature_ref_yearx)
     print('Cumulative past emissions: ',
-          total_emission.loc[model_start_year:year_x-1].sum())
+          total_ghg_emission.loc[model_start_year:year_x-1].sum()) # TODO
+
     # Calculate TCRE (Cum. Emissions divided by anthropogenic warming)
-    slope = total_emission.loc[model_start_year:year_x -
-                               1].sum() / dtemp_ref_yearx
+    slope = total_ghg_emission.loc[model_start_year:year_x -
+                               1].sum() / dtemperature_ref_yearx
     # Multiply TCRE with remaing allowable warming
-    reb = (temp_target_abs - temp_anth.loc[year_x]) * slope
+    reb = (temperature_target_abs - temperature_anth.loc[year_x]) * slope
     print('REB: ', reb)
     return reb
 
 
 def get_adaptive_emissions(
-        temp_target_rel, temp_target_type, year_x,
-        model_start_year, df, meta_file, costum_anth_temp_func=None):
+        temperature_target_rel, temperature_target_type, year_x,
+        model_start_year, df, meta_file, costum_anth_temperature_func=None):
     """Calculate "optimal" near-future CO2 emissions.
 
     A full time series with CO2 emissions is returned, but only the next
@@ -223,8 +226,8 @@ def get_adaptive_emissions(
     therefore need at least one year more than these five years.
 
     Args:
-        temp_target_rel (float): Temperature target (e.g. 1.5K).
-        temp_target_type (int): Switch for different types of temperature
+        temperature_target_rel (float): Temperature target (e.g. 1.5K).
+        temperature_target_type (int): Switch for different types of temperature
             targets.
             - 1: Temperature target estimated by additing remaining
                  warming until the target is reached based on 
@@ -253,7 +256,7 @@ def get_adaptive_emissions(
         meta_file (str or pathlib.Path): File for temporary data which
             should be transfered from one run of the AERA algorithm
             to the next.
-        costum_anth_temp_func (function): ONLY FOR ADVANCED USE CASES!
+        costum_anth_temperature_func (function): ONLY FOR ADVANCED USE CASES!
             Costum, user-defined function that calculates the
             anthropogenic temperature. This function is given the
             following args (same as given to `get_adaptive_emissions`):
@@ -278,39 +281,39 @@ def get_adaptive_emissions(
         1850, model_start_year)
     utils.validate_df(df, year_x, model_start_year)
 
-
-    total_emission_cols = ['ff_emission', 'lu_emission', 'non_co2_emission']
-    s_total_emission = df[total_emission_cols].sum(skipna=True, axis=1)
+    # TODO
+    total_ghg_emission_cols = ['ff_emission', 'lu_emission', 'non_co2_emission']
+    s_total_ghg_emission = df[total_ghg_emission_cols].sum(skipna=True, axis=1)
 
     # Define window length for extrapolated running mean
     winlen = 31
 
     # Calculate the temperature target
-    temp_target_abs = calculate_absolute_target_temperature(
-        temp_target_rel, model_start_year, df['temp'], winlen,
-        temp_target_type=temp_target_type)
+    temperature_target_abs = calculate_absolute_target_temperature(
+        temperature_target_rel, model_start_year, df['temperature'], winlen,
+        temperature_target_type=temperature_target_type) # TODO remplace temp by temperature
 
     # Extract the temperature time series until the time of the stocktake
-    s_temp_anth = df['temp'].loc[model_start_year:year_x].copy()
+    s_temperature_anth = df['temperature'].loc[model_start_year:year_x].copy()
     
     # Extract anthropogenic warming
-    if costum_anth_temp_func is None:
-        s_temp_anth.loc[:] = extrapolated_runmean_anth_temp(
-            year_x,model_start_year, df['temp'], winlen)
+    if costum_anth_temperature_func is None:
+        s_temperature_anth.loc[:] = extrapolated_runmean_anth_temp(
+            year_x,model_start_year, df['temperature'], winlen)
     else:
-        s_temp_anth.loc[:] = costum_anth_temp_func(
-            year_x, model_start_year, df['temp'],
+        s_temperature_anth.loc[:] = costum_anth_temperature_func(
+            year_x, model_start_year, df['temperature'],
         )
 
     # Extract again the temperature time series until the time of the
     # stocktake, simulated/measured temperature and only anthropogenic
     # temperature will be needed later
-    s_temp_abs = df['temp'].loc[model_start_year:year_x].copy()
+    s_temperature_abs = df['temperature'].loc[model_start_year:year_x].copy()
 
     # Calculate remaining emissions budget
     reb = calculate_remaining_emission_budget(
-        s_temp_anth, s_total_emission, temp_target_abs, year_x,
-        model_start_year, s_temp_abs)
+        s_temperature_anth, s_total_ghg_emission, temperature_target_abs, year_x,
+        model_start_year, s_temperature_abs)
 
     # Read in slope at Year_X as estimated at previous stocktake
     previous_slope = _calculate_previous_emission_slope(year_x, meta_file)
@@ -318,14 +321,14 @@ def get_adaptive_emissions(
         previous_slope = float(previous_slope)
 
     # Calculate the slope of the emissions curve at year X-1
-    slope_tm1 = s_total_emission.loc[year_x]-s_total_emission.loc[year_x-1]
+    slope_tm1 = s_total_ghg_emission.loc[year_x]-s_total_ghg_emission.loc[year_x-1]
     slope_tm1 = float(slope_tm1)
 
     # Calculate the future emission curves
     ec = emission_curve.EmissionCurve.get_cheapest_curve(
-        s_total_emission, year_x, reb, slope_tm1, previous_slope)
+        s_total_ghg_emission, year_x, reb, slope_tm1, previous_slope)
 
-    # ML, 24.04.26 we remove 'temp_target_rel,' that is useless and not supported
+    # ML, 24.04.26 we remove 'temperature_target_rel,' that is useless and not supported
     #anymore with the new implementation of get_cheapest_curve 
     
     # Add 5 (arbitrary number) years more to extand the emission curve
@@ -336,21 +339,21 @@ def get_adaptive_emissions(
     t = np.arange(1, ec.target_year_rel + additional_years + 2)
     year1 = int(year_x + 1)
     year2 = int(year1 + ec.target_year_rel) + additional_years
-    s_total_emission.loc[year1:year2] = ec.get_values(t=t)
+    s_total_ghg_emission.loc[year1:year2] = ec.get_values(t=t)
     print('CO2-fe emissions [Pg C] (fossil fuel CO2 + landuse + non-CO2) '
           'over next years:')
-    print(s_total_emission.loc[year1:year2-5])
+    print(s_total_ghg_emission.loc[year1:year2-5])
 
     # Calculate Fossil fuel emissions as the difference between
     # estimated total emissions and prescribed land-use and nonCO2
     # emissions
     s_ff_emission = (
-        s_total_emission - df['lu_emission'] - df['non_co2_emission'])
+        s_total_ghg_emission - df['lu_emission'] - df['non_co2_emission'])
     s_ff_emission.name = 'ff_emission'
 
     # Store data to metafile for debug and post-analysis
     io.store_metadata(
-        meta_file, temp_target_rel, temp_target_abs, year_x,
-        model_start_year, s_temp_anth, s_total_emission, s_ff_emission, ec)
+        meta_file, temperature_target_rel, temperature_target_abs, year_x, s_temperature_anth, s_total_ghg_emission, s_ff_emission, ec)
+    # TODO: Clarify what does s_ mean in s_temperature_anth, s_total_ghg_emission, s_ff_emission. Is it "series" or "simulated" or something else?
 
     return s_ff_emission.loc[year1:year2]
