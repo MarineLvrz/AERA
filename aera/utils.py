@@ -46,7 +46,7 @@ def validate_df(df, year_x, model_start_year):
 
 def _load_dat_df(f, column_names, delim_whitespace=False):
     df = pd.read_table(
-        f, header=None, index_col=0, delim_whitespace=delim_whitespace)
+        f, header=None, index_col=0, sep='\s+') # ML
     df.columns = column_names
     df.index.name = 'year'
     df.index = [int(x) for x in df.index.values]
@@ -54,7 +54,8 @@ def _load_dat_df(f, column_names, delim_whitespace=False):
         np.arange(df.index.min(), df.index.max())).interpolate()
     return df
 
-
+# TODO: Add more columns in  df 
+# * but where is total emissions in this function ? -> see get_adaptive_emissions in the core.py
 def get_base_df(
         ):
     """Return dataframe which is used by get_adaptive_emissions.
@@ -108,10 +109,14 @@ def get_base_df(
 
     df = pd.concat(df_list, axis=1)
     df['temp'] = np.nan
-    df['ff_emission'].loc[2026:] = np.nan
-    df['lu_emission'].loc[:1849] = np.nan
-    df['non_co2_emission'].loc[:1849] = np.nan
-    df.index.name = 'year'
+    #df['ff_emission'].loc[2026:] = np.nan
+    #df['lu_emission'].loc[:1849] = np.nan
+    #df['non_co2_emission'].loc[:1849] = np.nan
+    #df.index.name = 'year'
+    df.loc[2026:, 'ff_emission'] = np.nan      # ML
+    df.loc[:1849, 'lu_emission'] = np.nan      # ML
+    df.loc[:1849, 'non_co2_emission'] = np.nan # ML
+
     # Reorder columns
     df = df[['non_co2_emission', 'lu_emission',
              'ff_emission', 'temp']]
