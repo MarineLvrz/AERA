@@ -46,11 +46,7 @@ def runmean(array, winlen):
 
     Returns:
         Running mean of any timeseries given a window length.
-    """
-    print('--------------------------------')
-    print('Executing AERA on branch AERA_2.0')
-    print('--------------------------------')
-    
+    """    
     return np.convolve(array, np.ones((winlen)) / winlen, mode='same')
 
 
