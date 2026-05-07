@@ -14,13 +14,11 @@ Contains the following functions:
     near-future CO2 emissions.
 """
 
-import copy as cp
 from pathlib import Path
 
 import numpy as np
 import pandas as pd
 import xarray as xr
-from scipy.optimize import curve_fit
 
 from aera import constants
 from aera import utils
@@ -172,8 +170,6 @@ def _calculate_previous_emission_slope(year_x, meta_file):
     t = 5
     return 3 * a * t**2 + 2 * b * t + c
 
-# TODO redefine what is total emission
-# TODO what is temperature_abs_ts? 
 
 def calculate_remaining_emission_budget(
         temperature_anth, total_ghg_emission, temperature_target_abs, year_x,
@@ -202,8 +198,8 @@ def calculate_remaining_emission_budget(
     dtemperature_ref_yearx = (
         temperature_anth.loc[year_x]) - temperature_abs_ts.loc[model_start_year:1900].mean()
     print('Relative anthropogenic warming in Year X: ', dtemperature_ref_yearx)
-    print('Cumulative past emissions: ',
-          total_ghg_emission.loc[model_start_year:year_x-1].sum()) # TODO
+    print('Cumulative past GHGs emissions: ',
+          total_ghg_emission.loc[model_start_year:year_x-1].sum())
 
     # Calculate TCRE (Cum. Emissions divided by anthropogenic warming)
     slope = total_ghg_emission.loc[model_start_year:year_x -
@@ -281,7 +277,8 @@ def get_adaptive_emissions(
         1850, model_start_year)
     utils.validate_df(df, year_x, model_start_year)
 
-    # TODO
+    # For a temperature target, we need to consider ff + luc + nonCO2 emissions, 
+    # because all of them contribute to the anthropogenic warming (for the TCRE relationship). 
     total_ghg_emission_cols = ['ff_emission', 'lu_emission', 'non_co2_emission']
     s_total_ghg_emission = df[total_ghg_emission_cols].sum(skipna=True, axis=1)
 
@@ -291,7 +288,7 @@ def get_adaptive_emissions(
     # Calculate the temperature target
     temperature_target_abs = calculate_absolute_target_temperature(
         temperature_target_rel, model_start_year, df['temperature'], winlen,
-        temperature_target_type=temperature_target_type) # TODO remplace temp by temperature
+        temperature_target_type=temperature_target_type)
 
     # Extract the temperature time series until the time of the stocktake
     s_temperature_anth = df['temperature'].loc[model_start_year:year_x].copy()
@@ -329,7 +326,7 @@ def get_adaptive_emissions(
         s_total_ghg_emission, year_x, reb, slope_tm1, previous_slope)
 
     # ML, 24.04.26 we remove 'temperature_target_rel,' that is useless and not supported
-    #anymore with the new implementation of get_cheapest_curve 
+    # anymore with the new implementation of get_cheapest_curve 
     
     # Add 5 (arbitrary number) years more to extand the emission curve
     # further in case of extrapolation problems if models need
@@ -354,6 +351,5 @@ def get_adaptive_emissions(
     # Store data to metafile for debug and post-analysis
     io.store_metadata(
         meta_file, temperature_target_rel, temperature_target_abs, year_x, s_temperature_anth, s_total_ghg_emission, s_ff_emission, ec)
-    # TODO: Clarify what does s_ mean in s_temperature_anth, s_total_ghg_emission, s_ff_emission. Is it "series" or "simulated" or something else?
 
     return s_ff_emission.loc[year1:year2]

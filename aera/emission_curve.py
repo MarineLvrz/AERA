@@ -247,7 +247,6 @@ class EmissionCurve:
         )
 
     @classmethod # ML
-    # TODO: Replace s_total_ghg_emission by total_ghg_emission
     def get_cheapest_curve(
             cls, s_total_ghg_emission: pd.Series, year_x: int,
             reb: float, slope_tm1: float, previous_slope: float | None = None) -> EmissionCurve:
