@@ -21,14 +21,11 @@ Contains the following functions:
     near-future CO2 emissions.
 """
 
-import copy as cp
 from pathlib import Path
 
 import numpy as np
-import pandas as pd
 import xarray as xr
 
-from aera import constants
 from aera import utils
 from aera import io
 from aera import emission_curve

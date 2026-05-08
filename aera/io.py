@@ -1,11 +1,7 @@
 """Definition of meta data storage functions."""
 
-import copy
-import dataclasses
-import itertools
 from pathlib import Path
 
-import numpy as np
 import pandas as pd
 import xarray as xr
 
@@ -21,15 +17,14 @@ def store_metadata(
     # total_ghg_emission accounts for ff + luc + nonco2 emissions                                                                                             
     # total_co2_emission accounts for ff + luc emissions                                                                                                      
     timeseries_columns = [                                                                                                                                    
-        'total_ghg_emission', 'total_co2_emission', 'ff_emission', 'temperature_anth', 'omega_arag_anth', 'temperature_anth_rel', 'omega_arag_anth_rel'] # ML 07.05.2026                                                                                                                                                  
-                                                                                                                                                              
+        'total_ghg_emission', 'total_co2_emission', 'ff_emission', 'temperature_anth', 'omega_arag_anth', 'temperature_anth_rel', 'omega_arag_anth_rel'] # ML 07.05.2026                                                                                                                                                                                                                                                                                                    
     scalar_columns = [                                                                                                                                        
         'temperature_target_abs', 'omega_arag_target_abs', 'total_ghg_emission_budget', 'total_co2_emission_budget', 'ff_emission_budget',                    
         'reb', 'ec_cost', 'ec_reb_diff', 'ec_overshoot_integral', 'ec_slope_t1',                                                                              
         'ec_slope_change', 'ec_overshoot','ec_curvature', 'ec_target_year_rel',                                                                               
         'ec_a', 'ec_b', 'ec_c', 'ec_d',                                                                                                                       
-        ] # ML 07.05.2026                                                                                                                                     
-                                                                                                                                                              
+        ] # ML 07.05.2026
+                                                                                                                                            
     string_column = ['aera_target_variable'] # ML 07.05.2026
 
     try:
