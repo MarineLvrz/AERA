@@ -248,7 +248,7 @@ class EmissionCurve:
 
     @classmethod # ML
     def get_cheapest_curve(
-            cls, s_total_emission: pd.Series, year_x: int,
+            cls, s_total_co2_emission: pd.Series, year_x: int,
             reb: float, slope_tm1: float, previous_slope: float | None = None) -> EmissionCurve:
         """
         Factory method to get the best emission curve.
@@ -263,7 +263,7 @@ class EmissionCurve:
 
         Args:
             cls (Python class):
-            s_total_emission (pd.Series): Total GHG emission (CO2-eq)
+            s_total_co2_emission (pd.Series): Total GHG emission (CO2-eq)
                 timeseries.
             year_x (int): Current year in which the emissions for the next
                 five years should be calculated.
@@ -282,10 +282,10 @@ class EmissionCurve:
         if previous_slope is None:
             # If no previous stocktake exist that used the AERA, use
             # the slope at year X
-            c0 = s_total_emission.diff().loc[year_x]
+            c0 = s_total_co2_emission.diff().loc[year_x]
 
         # d is the present day emissions
-        d = s_total_emission.loc[year_x]
+        d = s_total_co2_emission.loc[year_x]
 
         # The future emission curve needs to be at least 5 years long.
         # When the acidity target is almost reached and emissions

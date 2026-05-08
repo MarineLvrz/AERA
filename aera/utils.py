@@ -41,10 +41,11 @@ def validate_df(df, year_x, model_start_year): # ML
             'The historical run is too short for this algorithm.')
 
     col_years_dict = {
-        'OmegaA': np.arange(model_start_year, year_x+1),
-        'ff_emission': np.arange(model_start_year, year_x+1),
-        'lu_emission': np.arange(model_start_year, MAX_YEAR+1),
-        'non_co2_emission': np.arange(model_start_year, MAX_YEAR+1),
+        'non_co2_emission': np.arange(model_start_year, MAX_YEAR+1),                                                                                          
+        'lu_emission': np.arange(model_start_year, MAX_YEAR+1),                                                                                               
+        'ff_emission': np.arange(model_start_year, year_x+1),                                                                                                 
+        'omega_arag': np.arange(model_start_year, year_x+1),                                                                                                 
+        # We do not validate temperature column because it is expected to be empty for the temperature simulation
         }
     for col_name, years in col_years_dict.items():
         col = df[col_name].dropna()
@@ -134,13 +135,15 @@ def get_base_df(
     df = pd.concat(df_list, axis=1)
 
     # Take into account timesteps that are not assigned to any prescribed input data
-    df['OmegaA'] = np.nan                      # ML
-    df.loc[2026:, 'ff_emission'] = np.nan      # ML
-    df.loc[:1849, 'lu_emission'] = np.nan      # ML
-    df.loc[:1849, 'non_co2_emission'] = np.nan # ML
-    df.index.name = 'year'
-    # Reorder columns
-    df = df[['non_co2_emission', 'lu_emission', 
-             'ff_emission', 'OmegaA']] # ML
+    df.loc[:1849, 'non_co2_emission'] = np.nan # ML                                                                                                           
+    df.loc[:1849, 'lu_emission'] = np.nan      # ML                                                                                                           
+    df.loc[2026:, 'ff_emission'] = np.nan      # ML                                                                                                           
+    df['temperature'] = np.nan                 # ML                                                                                                           
+    df['omega_arag'] = np.nan                  # ML 07.05.2026                                                                                                
+    df.index.name = 'year'                                                                                                                                    
+                                                                                                                                                              
+    # Reorder columns                                                                                                                                         
+    df = df[['non_co2_emission', 'lu_emission',                                                                                                               
+             'ff_emission', 'temperature', 'omega_arag']] # ML 07.05.2026
 
     return df.loc[MIN_YEAR:2499]

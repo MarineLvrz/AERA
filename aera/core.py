@@ -27,7 +27,6 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 import xarray as xr
-from scipy.optimize import curve_fit
 
 from aera import constants
 from aera import utils
@@ -169,16 +168,16 @@ def _calculate_previous_emission_slope(year_x, meta_file):
 
 
 def calculate_remaining_emission_budget( # ML
-        arag_anth, total_emission, arag_target_abs, year_x,
+        omega_arag_anth, total_co2_emission, arag_target_abs, year_x,
         model_start_year, arag_abs_ts):
     
     """
     Calculate remaining emission budget.
 
     Args:
-        arag_anth (array-like): Time series of anthropogenic aragonite 
+        omega_arag_anth (array-like): Time series of anthropogenic aragonite 
         saturation state (without any natural variablity).
-        total_emission (array-like): Time series of total emissions.
+        total_co2_emission (array-like): Time series of total emissions.
         arag_target_abs (float): Absolute target aragonite saturation state.
         year_x (int): Current year in which the emissions for the next
             five years should be calculated.
@@ -194,15 +193,15 @@ def calculate_remaining_emission_budget( # ML
     
     # Substract the reference period aragonite (1850-1900)
     darag_ref_yearx = (
-        arag_anth.loc[year_x]) - arag_abs_ts.loc[model_start_year:1900].mean()
+        omega_arag_anth.loc[year_x]) - arag_abs_ts.loc[model_start_year:1900].mean()
     print('Relative anthropogenic acidification in Year X: ', darag_ref_yearx)
     print('Cumulative past emissions: ',
-          total_emission.loc[model_start_year:year_x-1].sum())
+          total_co2_emission.loc[model_start_year:year_x-1].sum())
     # Calculate TCRE (Cum. Emissions divided by anthropogenic warming)
-    slope = total_emission.loc[model_start_year:year_x -
+    slope = total_co2_emission.loc[model_start_year:year_x -
                                1].sum() / darag_ref_yearx
     # Multiply TCRE with remaing allowable warming
-    reb = (arag_target_abs - arag_anth.loc[year_x]) * slope
+    reb = (arag_target_abs - omega_arag_anth.loc[year_x]) * slope
     print('REB: ', reb)
     
     return reb
@@ -264,29 +263,29 @@ def get_adaptive_emissions( # ML
     winlen = 31
 
     # Calculate relative aragonite target
-    arag_target_rel = calculate_relative_target_aragonite(arag_target_abs, df['OmegaA'], model_start_year)
+    arag_target_rel = calculate_relative_target_aragonite(arag_target_abs, df['omega_arag'], model_start_year)
 
     # Initialise the variable for anthropogenic aragonite time series until the time of the stocktake
-    s_arag_anth = df['OmegaA'].loc[model_start_year:year_x].copy()
+    s_omega_arag_anth = df['omega_arag'].loc[model_start_year:year_x].copy()
 
     # Extract anthropogenic aragonite time series
     # Second option does not exist for aragonite
     if costum_anth_arag_func is None:
-        s_arag_anth.loc[:] = extrapolated_runmean_anth_arag(
-            year_x,model_start_year, df['OmegaA'], winlen)
+        s_omega_arag_anth.loc[:] = extrapolated_runmean_anth_arag(
+            year_x,model_start_year, df['omega_arag'], winlen)
     else:
-        s_arag_anth.loc[:] = costum_anth_arag_func(
-            year_x, model_start_year, df['OmegaA'],
+        s_omega_arag_anth.loc[:] = costum_anth_arag_func(
+            year_x, model_start_year, df['omega_arag'],
         )
 
     # Extract again the aragonite saturation state time series until 
     # the time of the stocktake, simulated/measured anthropogenic aragonite 
     # saturation state will be needed later
-    s_arag_abs = df['OmegaA'].loc[model_start_year:year_x].copy()
+    s_arag_abs = df['omega_arag'].loc[model_start_year:year_x].copy()
 
     # Calculate remaining emissions budget
     reb = calculate_remaining_emission_budget(
-        s_arag_anth, s_emission_of_interest, arag_target_abs, year_x,
+        s_omega_arag_anth, s_emission_of_interest, arag_target_abs, year_x,
         model_start_year, s_arag_abs)
 
     # Read in slope at Year_X as estimated at previous stocktake
@@ -325,7 +324,6 @@ def get_adaptive_emissions( # ML
     
     # Store data to metafile for debug and post-analysis
     io.store_metadata(
-        meta_file, arag_target_rel, arag_target_abs, year_x,
-        model_start_year, s_arag_anth, s_emission_of_interest, s_ff_emission, ec)
+        meta_file, arag_target_rel, arag_target_abs, year_x, s_omega_arag_anth, s_emission_of_interest, s_ff_emission, ec)
 
     return s_ff_emission.loc[year1:year2]
