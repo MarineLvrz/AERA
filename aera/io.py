@@ -7,7 +7,7 @@ import xarray as xr
 
 def store_metadata(
         meta_file, temperature_target_rel, temperature_target_abs, year_x,
-        s_temperature_anth, s_total_ghg_emission, s_ff_emission, emission_curve):
+        s_temperature_anth, s_total_ghg_emission, s_total_co2_emission, s_ff_emission, emission_curve):
     meta_file = Path(meta_file)
     timeseries_csv = Path(str(meta_file) + '.timeseries.csv')
     scalar_csv = Path(str(meta_file) + '.scalar.csv')
@@ -71,6 +71,9 @@ def store_metadata(
     for year in s_ff_emission.loc[:target_year_abs].index.values:
         df_timeseries.loc[
             (year_x, year), 'ff_emission'] = s_ff_emission.loc[year]
+    for year in s_total_co2_emission.loc[:target_year_abs].index.values:
+        df_timeseries.loc[
+            (year_x, year), 'total_co2_emission'] = s_total_co2_emission.loc[year]
     for year in s_total_ghg_emission.loc[:target_year_abs].index.values:
         df_timeseries.loc[
             (year_x, year), 'total_ghg_emission'] = s_total_ghg_emission.loc[year]

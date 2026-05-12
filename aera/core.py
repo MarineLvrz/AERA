@@ -276,11 +276,15 @@ def get_adaptive_emissions(
     model_start_year = max(
         1850, model_start_year)
     utils.validate_df(df, year_x, model_start_year)
-
+    
     # For a temperature target, we need to consider ff + luc + nonCO2 emissions, 
     # because all of them contribute to the anthropogenic warming (for the TCRE relationship). 
-    total_ghg_emission_cols = ['ff_emission', 'lu_emission', 'non_co2_emission']
-    s_total_ghg_emission = df[total_ghg_emission_cols].sum(skipna=True, axis=1)
+    ghg_emission_cols = ['ff_emission', 'lu_emission', 'non_co2_emission']
+    s_total_ghg_emission = df[ghg_emission_cols].sum(skipna=True, axis=1)
+
+    # ML 12.05.26 we want both targets to return the 3 emission time series
+    co2_emission_cols = ['ff_emission', 'lu_emission'] # ML
+    s_total_co2_emission = df[co2_emission_cols].sum(skipna=True, axis=1)
 
     # Define window length for extrapolated running mean
     winlen = 31
@@ -350,6 +354,6 @@ def get_adaptive_emissions(
 
     # Store data to metafile for debug and post-analysis
     io.store_metadata(
-        meta_file, temperature_target_rel, temperature_target_abs, year_x, s_temperature_anth, s_total_ghg_emission, s_ff_emission, ec)
+        meta_file, temperature_target_rel, temperature_target_abs, year_x, s_temperature_anth, s_total_ghg_emission, s_total_co2_emission, s_ff_emission, ec)
 
     return s_ff_emission.loc[year1:year2]
