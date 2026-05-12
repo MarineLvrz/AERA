@@ -8,7 +8,7 @@ import xarray as xr
 
 def store_metadata(
         meta_file, omega_arag_target_rel, omega_arag_target_abs, year_x,
-        s_omega_arag_anth, s_total_co2_emission, s_ff_emission, emission_curve):
+        s_omega_arag_anth, s_total_ghg_emission, s_total_co2_emission, s_ff_emission, emission_curve):
     meta_file = Path(meta_file)
     timeseries_csv = Path(str(meta_file) + '.timeseries.csv')
     scalar_csv = Path(str(meta_file) + '.scalar.csv')
@@ -73,6 +73,9 @@ def store_metadata(
     for year in s_total_co2_emission.loc[:target_year_abs].index.values:
         df_timeseries.loc[
             (year_x, year), 'total_co2_emission'] = s_total_co2_emission.loc[year]
+    for year in s_total_ghg_emission.loc[:target_year_abs].index.values:
+        df_timeseries.loc[
+            (year_x, year), 'total_ghg_emission'] = s_total_ghg_emission.loc[year] # ML 12.05.26 we want both targets to return the 3 emission time series
     for year in s_omega_arag_anth.loc[:target_year_abs].index.values:
         df_timeseries.loc[
             (year_x, year), 'omega_arag_anth'] = s_omega_arag_anth.loc[year]

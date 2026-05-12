@@ -250,11 +250,15 @@ def get_adaptive_emissions( # ML
         1850, model_start_year)
     utils.validate_df(df, year_x, model_start_year)
 
+    # ML 12.05.26 we want both targets to return the 3 emission time series
+    ghg_emission_cols = ['ff_emission', 'lu_emission', 'non_co2_emission']
+    s_total_ghg_emission = df[ghg_emission_cols].sum(skipna=True, axis=1)
+
     # We discard non-co2, because in the case of aragonite saturation
     # state, we want only ff + LUC in the computation of the TCRE.
     # Non-CO2 do not impact ocean acidification.
-    emission_of_interest_cols = ['ff_emission', 'lu_emission'] # ML
-    s_emission_of_interest = df[emission_of_interest_cols].sum(skipna=True, axis=1)
+    co2_emission_cols = ['ff_emission', 'lu_emission'] # ML
+    s_total_co2_emission = df[co2_emission_cols].sum(skipna=True, axis=1)
 
     # Define window length for extrapolated running mean
     winlen = 31
@@ -282,7 +286,7 @@ def get_adaptive_emissions( # ML
 
     # Calculate remaining emissions budget
     reb = calculate_remaining_emission_budget(
-        s_omega_arag_anth, s_emission_of_interest, arag_target_abs, year_x,
+        s_omega_arag_anth, s_total_co2_emission, arag_target_abs, year_x,
         model_start_year, s_arag_abs)
 
     # Read in slope at Year_X as estimated at previous stocktake
@@ -291,13 +295,13 @@ def get_adaptive_emissions( # ML
         previous_slope = float(previous_slope)
 
     # Calculate the slope of the emissions curve at year X-1
-    slope_tm1 = s_emission_of_interest.loc[year_x]-s_emission_of_interest.loc[year_x-1]
+    slope_tm1 = s_total_co2_emission.loc[year_x]-s_total_co2_emission.loc[year_x-1]
     slope_tm1 = float(slope_tm1)
 
     # Calculate the future emission curves
     # get_cheapest_curve actually does not need the argument 'arag_target_rel'
     ec = emission_curve.EmissionCurve.get_cheapest_curve( 
-        s_emission_of_interest, year_x, reb, slope_tm1, previous_slope)
+        s_total_co2_emission, year_x, reb, slope_tm1, previous_slope)
 
     # Add 5 (arbitrary number) years to extend the emission curve further in
     # case of extrapolation problems if models need emissions from the year 
@@ -306,21 +310,21 @@ def get_adaptive_emissions( # ML
     t = np.arange(1, ec.target_year_rel + additional_years + 2)
     year1 = int(year_x + 1)                                          # Year following the current stocktake
     year2 = int(year1 + ec.target_year_rel) + additional_years       # 5 year after the target has been reached
-    s_emission_of_interest.loc[year1:year2] = ec.get_values(t=t)
+    s_total_co2_emission.loc[year1:year2] = ec.get_values(t=t)
     # We discard non-CO2 for the reasons stated above
     print('CO2 emissions [Pg C] (fossil-fuel CO2 + land use) ' 
           'over next years:')
-    print(s_emission_of_interest.loc[year1:year2-5])
+    print(s_total_co2_emission.loc[year1:year2-5])
 
     # Calculate fossil fuel emissions as the difference between
     # estimated emissions of interest and prescribed land use emissions
     # We only need to subtract LUC emissions in the case of OA, non-CO2 
-    # emissions are not considered into 's_emission_of_interest'
-    s_ff_emission = (s_emission_of_interest - df['lu_emission']) # ML
+    # emissions are not considered into 's_total_co2_emission'
+    s_ff_emission = (s_total_co2_emission - df['lu_emission']) # ML
     s_ff_emission.name = 'ff_emission'
     
     # Store data to metafile for debug and post-analysis
     io.store_metadata(
-        meta_file, arag_target_rel, arag_target_abs, year_x, s_omega_arag_anth, s_emission_of_interest, s_ff_emission, ec)
+        meta_file, arag_target_rel, arag_target_abs, year_x, s_omega_arag_anth, s_total_ghg_emission, s_total_co2_emission, s_ff_emission, ec)
 
     return s_ff_emission.loc[year1:year2]
