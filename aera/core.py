@@ -345,6 +345,13 @@ def get_adaptive_emissions(
           'over next years:')
     print(s_total_ghg_emission.loc[year1:year2-5])
 
+    # Calculate co2 emissions as the difference between
+    # estimated total emissions and prescribed nonCO2
+    # emissions
+    s_total_co2_emission = (
+        s_total_ghg_emission - df['non_co2_emission'])
+    s_total_co2_emission.name = 'total_co2_emission'
+
     # Calculate Fossil fuel emissions as the difference between
     # estimated total emissions and prescribed land-use and nonCO2
     # emissions
