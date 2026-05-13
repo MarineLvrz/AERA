@@ -316,6 +316,13 @@ def get_adaptive_emissions( # ML
           'over next years:')
     print(s_total_co2_emission.loc[year1:year2-5])
 
+    # Calculate ghg emissions as the sum of
+    # estimated total co2 emissions and prescribed nonCO2
+    # emissions
+    s_total_ghg_emission = (
+        s_total_co2_emission + df['non_co2_emission']) # ML 13.05.26
+    s_total_ghg_emission.name = 'total_ghg_emission'
+
     # Calculate fossil fuel emissions as the difference between
     # estimated emissions of interest and prescribed land use emissions
     # We only need to subtract LUC emissions in the case of OA, non-CO2 
