@@ -141,8 +141,9 @@ def calculate_absolute_target_temperature(
     return temperature_target_abs
 
 
-def _calculate_previous_emission_slope(year_x, meta_file):
-    """Calculate the slope at Year X by using the emission
+def _calculate_previous_emission_slope(year_x, combined_meta_file): # ML 15.05.2026, we rename meta_file to combined_meta_file to be more specific and avoid confusion with the meta_file used in get_adaptive_emissions. For the combined version, we want to refer to the combined file.
+    """
+    Calculate the slope at Year X by using the emission
     curve from the previous stocktake.
 
     To make the emission curve as smooth as possible the
@@ -152,15 +153,15 @@ def _calculate_previous_emission_slope(year_x, meta_file):
     Args:
         year_x (int): Current year in which the emissions for the next
             five years should be calculated.
-        meta_file (str or pathlib.Path): File for temporary data which
+        combined_meta_file (str or pathlib.Path): File for temporary data which
             should be transfered from one run of the AERA algorithm
             to the next.
 
     """
-    meta_file = Path(meta_file)
-    if not meta_file.exists():
+    combined_meta_file = Path(combined_meta_file)
+    if not combined_meta_file.exists():
         return
-    ds = xr.open_dataset(meta_file)
+    ds = xr.open_dataset(combined_meta_file)
     try:
         a = ds.ec_a.sel(year_stocktake=year_x-5)
         b = ds.ec_b.sel(year_stocktake=year_x-5)
@@ -212,7 +213,7 @@ def calculate_remaining_emission_budget(
 
 def get_adaptive_emissions(
         temperature_target_rel, temperature_target_type, year_x,
-        model_start_year, df, meta_file, costum_anth_temperature_func=None):
+        model_start_year, df, meta_file, combined_meta_file, costum_anth_temperature_func=None):
     """Calculate "optimal" near-future CO2 emissions.
 
     A full time series with CO2 emissions is returned, but only the next
@@ -317,7 +318,7 @@ def get_adaptive_emissions(
         model_start_year, s_temperature_abs)
 
     # Read in slope at Year_X as estimated at previous stocktake
-    previous_slope = _calculate_previous_emission_slope(year_x, meta_file)
+    previous_slope = _calculate_previous_emission_slope(year_x, combined_meta_file) # ML 15.05.2026, we want to access the parameters from the chosen emission curve
     if previous_slope is not None:
         previous_slope = float(previous_slope)
 

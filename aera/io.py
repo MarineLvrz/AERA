@@ -45,6 +45,8 @@ def store_metadata(
     target_year_abs = emission_curve.target_year_rel + year_x
     df_scalar.loc[year_x, 'total_ghg_emission_budget'] = ( 
         s_total_ghg_emission.loc[:target_year_abs].sum())
+    df_scalar.loc[year_x, 'total_co2_emission_budget'] = ( 
+        s_total_co2_emission.loc[:target_year_abs].sum()) # ML 13.05.26, we want to output the total ghg emission budget for both targets
     df_scalar.loc[year_x, 'ff_emission_budget'] = (
         s_ff_emission.loc[:target_year_abs].sum())
     df_scalar.loc[year_x, 'reb'] = emission_curve.reb
