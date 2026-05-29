@@ -185,4 +185,4 @@ Once you understand the examples, you can couple the AERA to your model using a 
 - Thomas Frölicher (thomas.froelicher@unibe.ch)
 - Fortunat Joos (fortunat.joos@unibe.ch)
 - Pierre Friedlingstein (p.friedlingstein@exeter.ac.uk)
-
+- Marine Leyvraz (marine.leyvraz@unibe.ch)
