@@ -186,3 +186,7 @@ Once you understand the examples, you can couple the AERA to your model using a 
 - Fortunat Joos (fortunat.joos@unibe.ch)
 - Pierre Friedlingstein (p.friedlingstein@exeter.ac.uk)
 - Marine Leyvraz (marine.leyvraz@unibe.ch)
+
+## Comment:
+This AERA repository is a continuity of the AERA project started by Terhaar et al. You can find the initial project repository following this link: https://github.com/Jete90/AERA
+
