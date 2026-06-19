@@ -163,7 +163,8 @@ def _calculate_previous_emission_slope(year_x, combined_meta_file): # ML 15.05.2
     return 3 * a * t**2 + 2 * b * t + c
 
 
-def calculate_remaining_emission_budget( # ML
+# ML 17.06.2026, we need a generic function to compute the remaining emission budget
+'''def calculate_remaining_emission_budget( # ML
         omega_arag_anth, total_co2_emission, arag_target_abs, year_x,
         model_start_year, arag_abs_ts):
     
@@ -183,8 +184,8 @@ def calculate_remaining_emission_budget( # ML
             aragonite saturation state (including natural variablity).
 
     Returns:
-        reb (float): Remaining emission budget until the acidification target 
-            is reached in Pg C.
+        reb_co2 (float): Remaining emission budget until the acidification target 
+            is reached in Pg C. reb_co2 does not account for non-CO2 emissions
     """
     
     # Substract the reference period aragonite (1850-1900)
@@ -193,15 +194,70 @@ def calculate_remaining_emission_budget( # ML
     print('Relative anthropogenic acidification in Year X: ', darag_ref_yearx)
     print('Cumulative past emissions: ',
           total_co2_emission.loc[model_start_year:year_x-1].sum())
-    # Calculate TCRE (Cum. Emissions divided by anthropogenic warming)
+    # Calculate TARE (Cum. Emissions divided by anthropogenic acidification)
     slope = total_co2_emission.loc[model_start_year:year_x -
                                1].sum() / darag_ref_yearx
-    # Multiply TCRE with remaing allowable warming
-    reb = (arag_target_abs - omega_arag_anth.loc[year_x]) * slope
-    print('REB: ', reb)
-    
-    return reb
+    # Multiply TCRE with remaing allowable acidification
+    reb_co2 = (arag_target_abs - omega_arag_anth.loc[year_x]) * slope
+    print('REB_co2: ', reb_co2)
 
+    return reb_co2'''
+
+# ML 17.06.2026, Refactor calculate_remaining_emission_budget() to make it generic
+def calculate_remaining_emission_budget(
+        variable_anth, total_emission, variable_target_abs, year_x,
+        model_start_year, variable_abs_ts):
+    """
+    Calculate the remaining emission budget (REB) using a transient response approach.
+
+    This function calculates the remaining allowable emissions until a specific climate
+    target is reached. It computes the slope of the variable of interest relative to 
+    cumulative emissions (either fossil-fuel + land-use change emissions, or fossil-fuel
+    + land-use change + non-CO2 emissions) and estimates the remaining emission budget 
+    assuming the relation is linear.
+
+    Args:
+        variable_anth (array-like): Time series of the anthropogenic component of the variable
+          of interest (temperature, aragonite saturation state), without any natural variablity.
+        total_emission (array-like): Time series of emissions (CO2 only or total GHGs).
+        variable_target_abs (float): Absolute threshold target value for the variable of interest.
+        year_x (int): Current year in which the emissions for the next five years should be 
+        calculated.
+        model_start_year (int): Year in which the historical simulation (pre-cursor for the
+          adaptive scenario simulation) was started.
+        variable_target_abs (array-like): Time series of the measured or simulated variable of 
+        interest (including natural variability).
+
+    Returns:
+        remaining_emission_budget (float): Remaining emission budget until the target of the 
+        variable of interest is reached (in Pg C).
+    """
+    
+    # 1. Compute anthropogenic change by subtracting reference period temperature (1850-1900)
+    delta_variable_ref_yearx = (variable_anth.loc[year_x] - 
+                                variable_abs_ts.loc[model_start_year:1900].mean())
+    
+    print('Relative anthropogenic warming in year X: ', delta_variable_ref_yearx)
+    
+    # 2. Calculate cumulative emissions up to the stocktake year
+    cum_emissions = total_emission.loc[model_start_year:year_x-1].sum()
+    
+    print('Cumulative past GHGs emissions: ', cum_emissions)
+
+    # 3. Determine transient response (emissions per unit change in the variable of 
+    # interest) (TCRE or TARE)
+    slope = cum_emissions / delta_variable_ref_yearx
+    
+    # 4. Multiply transient response with remaing allowable warming/acidification
+    # There is no negative REB when the target has not been crossed because 
+    # for the acidification case, both factors are negative and the sign cancels. 
+    # We expect temp_now < temp_target and temp increases so slope > 0 -> REB > 0
+    # omega_arag_now > omega_arag_target and omega_arag decreases so slope < 0 -> REB > 0
+    remaining_emission_budget = (variable_target_abs - variable_anth.loc[year_x]) * slope
+    
+    print('REB: ', remaining_emission_budget)
+    
+    return remaining_emission_budget
 
 
 def get_adaptive_emissions( # ML
@@ -283,11 +339,19 @@ def get_adaptive_emissions( # ML
     # saturation state will be needed later
     s_arag_abs = df['omega_arag'].loc[model_start_year:year_x].copy()
 
-    # Calculate remaining emissions budget
-    reb = calculate_remaining_emission_budget(
+    # Calculate remaining emissions budget considering CO2 emissions
+    # This is the reb we need for generating the emission for the acidification target
+    reb_co2 = calculate_remaining_emission_budget(
         s_omega_arag_anth, s_total_co2_emission, arag_target_abs, year_x,
         model_start_year, s_arag_abs)
 
+    # Calculate remaining emissions budget considering GHGs emissions, ML 17.06.2026
+    # This is the reb we need for choosing which is the most stringent target 
+    # (temperature or acidification)
+    reb_ghg = calculate_remaining_emission_budget(
+        s_omega_arag_anth, s_total_ghg_emission, arag_target_abs, year_x,
+        model_start_year, s_arag_abs)
+    
     # Read in slope at Year_X as estimated at previous stocktake
     previous_slope = _calculate_previous_emission_slope(year_x, combined_meta_file) # ML 15.05.2026, we want to access the parameters from the chosen emission curve
     if previous_slope is not None:
@@ -300,7 +364,7 @@ def get_adaptive_emissions( # ML
     # Calculate the future emission curves
     # get_cheapest_curve actually does not need the argument 'arag_target_rel'
     ec = emission_curve.EmissionCurve.get_cheapest_curve( 
-        s_total_co2_emission, year_x, reb, slope_tm1, previous_slope)
+        s_total_co2_emission, year_x, reb_co2, slope_tm1, previous_slope)
 
     # Add 5 (arbitrary number) years to extend the emission curve further in
     # case of extrapolation problems if models need emissions from the year 
@@ -331,6 +395,6 @@ def get_adaptive_emissions( # ML
     
     # Store data to metafile for debug and post-analysis
     io.store_metadata(
-        meta_file, arag_target_rel, arag_target_abs, year_x, s_omega_arag_anth, s_total_ghg_emission, s_total_co2_emission, s_ff_emission, ec)
+        meta_file, arag_target_rel, arag_target_abs, year_x, s_omega_arag_anth, s_total_ghg_emission, s_total_co2_emission, s_ff_emission, ec, reb_ghg) # ML 17.06.2026, add reb_ghg
 
     return s_ff_emission.loc[year1:year2]
