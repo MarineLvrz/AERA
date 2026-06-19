@@ -7,7 +7,7 @@ import xarray as xr
 
 def store_metadata(
         meta_file, temperature_target_rel, temperature_target_abs, year_x,
-        s_temperature_anth, s_total_ghg_emission, s_total_co2_emission, s_ff_emission, emission_curve):
+        s_temperature_anth, s_total_ghg_emission, s_total_co2_emission, s_ff_emission, emission_curve, reb_co2): # ML 17.06.2026
     meta_file = Path(meta_file)
     timeseries_csv = Path(str(meta_file) + '.timeseries.csv')
     scalar_csv = Path(str(meta_file) + '.scalar.csv')
@@ -20,7 +20,7 @@ def store_metadata(
     
     scalar_columns = [
         'temperature_target_abs', 'omega_arag_target_abs', 'total_ghg_emission_budget', 'total_co2_emission_budget', 'ff_emission_budget',
-        'reb', 'ec_cost', 'ec_reb_diff', 'ec_overshoot_integral', 'ec_slope_t1',
+        'reb_co2', 'reb_ghg', 'ec_cost', 'ec_reb_diff', 'ec_overshoot_integral', 'ec_slope_t1',
         'ec_slope_change', 'ec_overshoot','ec_curvature', 'ec_target_year_rel',
         'ec_a', 'ec_b', 'ec_c', 'ec_d', 
         ] # ML 07.05.2026
@@ -49,7 +49,8 @@ def store_metadata(
         s_total_co2_emission.loc[:target_year_abs].sum()) # ML 13.05.26, we want to output the total ghg emission budget for both targets
     df_scalar.loc[year_x, 'ff_emission_budget'] = (
         s_ff_emission.loc[:target_year_abs].sum())
-    df_scalar.loc[year_x, 'reb'] = emission_curve.reb
+    df_scalar.loc[year_x, 'reb_co2'] = reb_co2 #  ML 17.06.2026, We store the reb of CO2 emissions in order to compare the REBs and choose the most stringent target
+    df_scalar.loc[year_x, 'reb_ghg'] = emission_curve.reb # ML 17.06.2026, For the temperature target we consider the reb of GHGs emissions
     for col in [x for x in scalar_columns if x.startswith('ec_')]:
         attribute = col[3:]
         df_scalar.loc[year_x, col] = getattr(emission_curve, attribute)
