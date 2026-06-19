@@ -19,8 +19,8 @@ def store_metadata(
     timeseries_columns = [                                                                                                                                    
         'total_ghg_emission', 'total_co2_emission', 'ff_emission', 'temperature_anth', 'omega_arag_anth', 'temperature_anth_rel', 'omega_arag_anth_rel'] # ML 07.05.2026                                                                                                                                                                                                                                                                                                    
     scalar_columns = [                                                                                                                                        
-        'temperature_target_abs', 'omega_arag_target_abs', 'total_ghg_emission_budget', 'total_co2_emission_budget', 'ff_emission_budget',                    
-        'reb_co2', 'reb_ghg', 'ec_cost', 'ec_reb_diff', 'ec_overshoot_integral', 'ec_slope_t1',                                                                              
+        'temperature_target_abs', 'omega_arag_target_abs', 'total_ghg_emission_budget', 'total_co2_emission_budget', 'ff_emission_budget', 'ff_emission_budget_5yrs',                    
+        'reb', 'ec_cost', 'ec_reb_diff', 'ec_overshoot_integral', 'ec_slope_t1',                                                                              
         'ec_slope_change', 'ec_overshoot','ec_curvature', 'ec_target_year_rel',                                                                               
         'ec_a', 'ec_b', 'ec_c', 'ec_d',                                                                                                                       
         ] # ML 17.06.2026
@@ -49,8 +49,9 @@ def store_metadata(
         s_total_co2_emission.loc[:target_year_abs].sum())
     df_scalar.loc[year_x, 'ff_emission_budget'] = (
         s_ff_emission.loc[:target_year_abs].sum())
-    df_scalar.loc[year_x, 'reb_co2'] = emission_curve.reb # ML 17.06.2026, For the acidification target we only consider the reb of co2 emissions
-    df_scalar.loc[year_x, 'reb_ghg'] = reb_ghg #  ML 17.06.2026, We store the reb of ghg emissions in order to compare the REBs and choose the most stringent target
+    df_scalar.loc[year_x, 'ff_emission_budget_5yrs'] = (
+        s_ff_emission.loc[:year_x+5].sum()) # ML 18.06.2026, cumulative ff-emissions until 5 years after the stocktake year
+    df_scalar.loc[year_x, 'reb'] = emission_curve.reb
     for col in [x for x in scalar_columns if x.startswith('ec_')]:
         attribute = col[3:]
         df_scalar.loc[year_x, col] = getattr(emission_curve, attribute)
