@@ -192,7 +192,7 @@ def calculate_remaining_emission_budget(
             temperature (including natural variablity).
 
     Returns:
-        reb_ghg (float): Remaining emission budget until the target
+        reb (float): Remaining emission budget until the target
             temperature is reached in Pg C.
 
     """
@@ -207,9 +207,9 @@ def calculate_remaining_emission_budget(
     slope = total_ghg_emission.loc[model_start_year:year_x -
                                1].sum() / dtemperature_ref_yearx
     # Multiply TCRE with remaing allowable warming
-    reb_ghg = (temperature_target_abs - temperature_anth.loc[year_x]) * slope
-    print('REB_ghg: ', reb_ghg)
-    return reb_ghg
+    reb = (temperature_target_abs - temperature_anth.loc[year_x]) * slope
+    print('reb: ', reb)
+    return reb
 '''
 
 
@@ -370,15 +370,9 @@ def get_adaptive_emissions(
     # temperature will be needed later
     s_temperature_abs = df['temperature'].loc[model_start_year:year_x].copy()
 
-    # Calculate remaining emissions budget considering CO2 emissions, ML 17.06.2026
-    # This is the reb we need for choosing which is the most stringent target 
-    # (temperature or acidification)
-    reb_co2 = calculate_remaining_emission_budget(
-        s_temperature_anth, s_total_co2_emission, temperature_target_abs, year_x,
-        model_start_year, s_temperature_abs)
+
     # Calculate remaining emissions budget considering GHGs emissions
-    # This is the reb we need for generating the emission for the temperature target
-    reb_ghg = calculate_remaining_emission_budget(
+    reb = calculate_remaining_emission_budget(
         s_temperature_anth, s_total_ghg_emission, temperature_target_abs, year_x,
         model_start_year, s_temperature_abs)
 
@@ -393,7 +387,7 @@ def get_adaptive_emissions(
 
     # Calculate the future emission curves
     ec = emission_curve.EmissionCurve.get_cheapest_curve(
-        s_total_ghg_emission, year_x, reb_ghg, slope_tm1, previous_slope)
+        s_total_ghg_emission, year_x, reb, slope_tm1, previous_slope)
 
     # ML, 24.04.26 we remove 'temperature_target_rel,' that is useless and not supported
     # anymore with the new implementation of get_cheapest_curve 
@@ -427,6 +421,6 @@ def get_adaptive_emissions(
 
     # Store data to metafile for debug and post-analysis
     io.store_metadata(
-        meta_file, temperature_target_rel, temperature_target_abs, year_x, s_temperature_anth, s_total_ghg_emission, s_total_co2_emission, s_ff_emission, ec, reb_co2) # ML 17.06.2026, add reb_co2
+        meta_file, temperature_target_rel, temperature_target_abs, year_x, s_temperature_anth, s_total_ghg_emission, s_total_co2_emission, s_ff_emission, ec)
 
     return s_ff_emission.loc[year1:year2]
