@@ -8,7 +8,7 @@ import xarray as xr
 
 def store_metadata(
         meta_file, omega_arag_target_rel, omega_arag_target_abs, year_x,
-        s_omega_arag_anth, s_total_ghg_emission, s_total_co2_emission, s_ff_emission, emission_curve, reb_ghg): # ML 17.06.2026
+        s_omega_arag_anth, s_total_ghg_emission, s_total_co2_emission, s_ff_emission, emission_curve):
     meta_file = Path(meta_file)
     timeseries_csv = Path(str(meta_file) + '.timeseries.csv')
     scalar_csv = Path(str(meta_file) + '.scalar.csv')
