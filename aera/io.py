@@ -35,7 +35,7 @@ def store_metadata(
         df_timeseries = df_timeseries.set_index(['year_stocktake', 'year'])
 
     try:
-        df_scalar = pd.read_csv(scalar_csv, index_col=0, header=0)
+        df_scalar = pd.read_csv(scalar_csv, index_col=0, header=0, float_precision='round_trip') # ML 27.07.2026, fix truncation issue with float values in the csv file
     except FileNotFoundError:
         df_scalar = pd.DataFrame(
             columns=scalar_columns+['year_stocktake'])
@@ -60,12 +60,12 @@ def store_metadata(
     for col in df_scalar.columns:
         if col in ['ec_a', 'ec_b', 'ec_c', 'ec_d']:
             continue
-        df_scalar[col] = df_scalar[col].map(lambda x: '%.3f' % x)
-    df_scalar.to_csv(scalar_csv)
+        df_scalar[col] = df_scalar[col].map(lambda x: f'{x:.3f}')
+    df_scalar.to_csv(scalar_csv, float_format='%.17g') # ML 27.07.2026, fix truncation issue with float values in the csv file
 
     # ML 07.05.2026, add emtpy column to store the string indicating which target we have chosen based on their REB                                           
     try:                                                                                                                                                      
-        df_string = pd.read_csv(string_csv, index_col=0, header=0)                                                                                            
+        df_string = pd.read_csv(string_csv, index_col=0, header=0, float_precision='round_trip') # ML 27.07.2026, fix truncation issue with float values in the csv file                                                                                        
     except FileNotFoundError:                                                                                                                                 
         df_string = pd.DataFrame(                                                                                                                             
             columns=string_column+['year_stocktake'])                                                                                                         
@@ -86,7 +86,7 @@ def store_metadata(
         df_timeseries.loc[
             (year_x, year), 'omega_arag_anth_rel'] = (
                   s_omega_arag_anth.loc[year] - omega_arag_target_abs + omega_arag_target_rel)
-    df_timeseries.to_csv(timeseries_csv)
+    df_timeseries.to_csv(timeseries_csv, float_format='%.17g') # ML 27.07.2026, fix truncation issue with float values in the csv file
 
     ds_timeseries = df_timeseries.to_xarray()
     ds_scalar = df_scalar.to_xarray()

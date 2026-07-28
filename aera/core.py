@@ -26,9 +26,7 @@ from pathlib import Path
 import numpy as np
 import xarray as xr
 
-from aera import utils
-from aera import io
-from aera import emission_curve
+from aera import emission_curve, io, utils
 
 
 def runmean(array, winlen):
@@ -43,7 +41,7 @@ def runmean(array, winlen):
     Returns:
         Running mean of any timeseries given a window length.
     """    
-    return np.convolve(array, np.ones((winlen)) / winlen, mode='same')
+    return np.convolve(array, np.ones(winlen) / winlen, mode='same')
 
 
 def extrapolated_runmean(array, winlen):
@@ -157,9 +155,17 @@ def _calculate_previous_emission_slope(year_x, combined_meta_file): # ML 15.05.2
         a = ds.ec_a.sel(year_stocktake=year_x-5)
         b = ds.ec_b.sel(year_stocktake=year_x-5)
         c = ds.ec_c.sel(year_stocktake=year_x-5)
+    # In case it tries to access a dictionary key that does not exist.
+    # We expect it to occur only in 2025 when no previous stocktake exist.
     except KeyError:
+        print('Could not find emission curve parameters from previous stocktake (ie year previous stocktake = {}').format(year_x-5) # ML 27.07.2026
+        print('This error is only expected in 2025 when no previous stocktake exist.')
         return
     t = 5
+    print(f'DEBUG 10.07.2026, AERA offline, a = {a.values}')
+    print(f'DEBUG 10.07.2026, AERA offline, b = {b.values}')
+    print(f'DEBUG 10.07.2026, AERA offline, c = {c.values}') 
+
     return 3 * a * t**2 + 2 * b * t + c
 
 
@@ -343,20 +349,32 @@ def get_adaptive_emissions( # ML
     reb = calculate_remaining_emission_budget(
         s_omega_arag_anth, s_total_co2_emission, arag_target_abs, year_x,
         model_start_year, s_arag_abs)
+    print(f'DEBUG 10.07.2026, AERA offline, reb = {reb}') 
 
     # Read in slope at Year_X as estimated at previous stocktake
     previous_slope = _calculate_previous_emission_slope(year_x, combined_meta_file) # ML 15.05.2026, we want to access the parameters from the chosen emission curve
-    if previous_slope is not None:
+    print(f'DEBUG 28.07.2026, AERA offline, previous_slope (before "if") = {previous_slope}')
+    if previous_slope: # Only executed when not none
         previous_slope = float(previous_slope)
-
+        print(f'DEBUG 28.07.2026, AERA offline, previous_slope (after "if") = {previous_slope}') 
+    else:
+        print('previous_slope is NONE.')
     # Calculate the slope of the emissions curve at year X-1
     slope_tm1 = s_total_co2_emission.loc[year_x]-s_total_co2_emission.loc[year_x-1]
     slope_tm1 = float(slope_tm1)
+    print(f'DEBUG 10.07.2026, AERA offline, slope_tm1 = {slope_tm1}') 
 
     # Calculate the future emission curves
     # get_cheapest_curve actually does not need the argument 'arag_target_rel'
     ec = emission_curve.EmissionCurve.get_cheapest_curve( 
         s_total_co2_emission, year_x, reb, slope_tm1, previous_slope)
+    print(f'DEBUG 10.07.2026, AERA offline, ec.reb = {ec.reb}') 
+    print(f'DEBUG 10.07.2026, AERA offline, ec.slope_t1 = {ec.slope_t1}') 
+    print(f'DEBUG 10.07.2026, AERA offline, ec.slope_tm1 = {ec.slope_tm1}') 
+    print(f'DEBUG 10.07.2026, AERA offline, ec.a = {ec.a}') 
+    print(f'DEBUG 10.07.2026, AERA offline, ec.b = {ec.b}') 
+    print(f'DEBUG 10.07.2026, AERA offline, ec.c = {ec.c}') 
+    print(f'DEBUG 10.07.2026, AERA offline, ec.d = {ec.d}') 
 
     # Add 5 (arbitrary number) years to extend the emission curve further in
     # case of extrapolation problems if models need emissions from the year 
